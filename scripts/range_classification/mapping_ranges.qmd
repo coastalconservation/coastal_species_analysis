@@ -9,6 +9,7 @@ library(tidyverse)
 library(here)
 library(sf)
 library(tmap)
+library(lwgeom) # for st_split
 ```
 
 ## Data 
@@ -110,11 +111,64 @@ Next steps:
 - Label the chunks with region ID starting with 1 at the most north
 
 
+```{r}
+# View CRS of data 
+st_crs(ca_zones_crop)
+
+# Transform to WGS84 which uses degrees 
+ca_zones_crop <- st_transform(ca_zones_crop, crs = "WGS84")
+# Check 
+st_crs(ca_zones_crop)
+
+print(st_bbox(ca_zones_crop))
+```
+
+
 
 
 ```{r}
 # Extract latitude breakpoints and sort from north to south
 latitude_breaks <- sort(ca_breaks$POINT_Y, decreasing = TRUE)
 
+
+# Create spliting lines from latitudes (longs from bbox of ca_zones_crop)
+split_lines <- st_sfc(
+  lapply(latitude_breaks, function(lat) {
+    st_linestring(matrix(c(-124.8, lat, -116.7, lat), ncol = 2, byrow = TRUE))
+  }),
+  crs = st_crs(ca_zones_crop)
+)
+
+# Combine linestrings into single geometry 
+split_lines_all <- st_union(split_lines)
+
+# Split the coastal buffer by latitudes 
+split_result <- st_split(ca_zones_crop, split_lines_all)
+
+# Convert the resulting geometry collection into polygons
+split_polygons <- st_collection_extract(split_result, "POLYGON")
+
+# Check the class of new polygons 
+class(split_polygons)
+
+# Check the result 
+tm_shape(split_polygons) + 
+  tm_polygons()
 ```
+
+
+```{r}
+# Locate center of each polygon 
+centroids <- st_centroid(split_polygons)
+
+# Create a data frame with region IDs based on latitude
+ca_regions_df <- st_as_sf(split_polygons) |> 
+  # Create region_id to indentify each region 
+  mutate(region_id = rank(-st_coordinates(centroids)[, 2]))  # Rank centroids by descending latitude
+
+# View results 
+tm_shape(ca_regions_df) + 
+    tm_polygons("region_id", palette = "viridis") 
+```
+
 
