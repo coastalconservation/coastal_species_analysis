@@ -1,7 +1,8 @@
 # Raw data files 
 data/raw/
 
-
+# processed data file (MIGHT NEED TO CHANGE LATER?)
+data/processed/
 
 # History files
 .Rhistory
