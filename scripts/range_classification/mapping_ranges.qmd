@@ -1,0 +1,120 @@
+---
+title: "mapping_ranges"
+format: html
+---
+
+## Libraries 
+```{r}
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+```
+
+## Data 
+
+California Coastal Commission's Coastal Zone Boundary 
+https://map.dfg.ca.gov/metadata/ds0990.html
+
+Table with lat long points to break up the state into 100 km chunks 
+Currently in drive folder data_and_methods
+
+
+```{r}
+# Read in lat long division file 
+ca_breaks <- read_csv(here('data', 'raw', 'mapping', 'CA_coast_021425.csv'))
+```
+
+
+```{r}
+# CA coastal zone boundary 
+ca_boundary <- st_read(here('data', 'raw', 'mapping', 'ds990.gdb'))
+
+# Assign polygon labels 
+ca_boundary <- ca_boundary |>
+  mutate(polygon_id = row_number())
+
+# Determine which polygons are the channel islands 
+# Explore data 
+tm_shape(ca_boundary) + 
+    tm_polygons("polygon_id", palette = "viridis")
+
+# Filter to mainland only 
+ca_mainland <- ca_boundary |> 
+  filter(polygon_id == 8)
+  
+```
+
+
+```{r}
+# Explore the data 
+plot(ca_mainland)
+
+class(ca_boundary) # sf_dataframe 
+st_crs(ca_boundary) #  NAD83 / California Albers 
+```
+
+Plan for map: Extend the boundaries of the coastal zones buy applying a buffer of 200 km, then clipping it to the original north and south bounds 
+
+
+
+
+
+```{r}
+# Apply 10,000 m  buffer to coastal zones 
+ca_zones_extended <- st_buffer(ca_mainland, dist = 30000)
+```
+
+```{r}
+# See original boundaries and extended 
+tm_shape(ca_zones_extended) + 
+  tm_polygons(col = "firebrick") + 
+tm_shape(ca_mainland) + 
+  tm_polygons(col = "grey90")
+```
+
+```{r}
+# Determine bounding box of original zones for y dimensions 
+ca_zones_bbox <- st_bbox(ca_mainland)
+print(ca_zones_bbox) # ymax = 450609.7 ymin = -605049.7
+
+# Determine bounding box of extended zones for x dimensions 
+extend_box <- st_bbox(ca_zones_extended)
+print(extend_box) #xmax = 308316.5 xmin = -414570.2
+
+# Create polygon of new bounds 
+crop_bbox <- st_bbox(c(
+  xmin = -414570.2,
+  ymin = -605049.7,
+  xmax = 308316.5,
+  ymax = 450609.7
+), crs = st_crs(ca_zones_extended))
+
+crop_polygon <- st_as_sfc(crop_bbox)
+
+# Crop the extended zones using the bounding box polygon
+ca_zones_crop <- st_intersection(crop_polygon, ca_zones_extended)
+
+# See new cropped extended zones 
+tm_shape(ca_zones_extended) + 
+  tm_polygons(col = "grey90") + # cropped 
+tm_shape(ca_zones_crop) + 
+  tm_polygons(col = "firebrick")  # fill size 
+```
+
+
+Next steps: 
+
+- Need to reproject to a CRS that using lat long 
+- Figure how to split polygon at lines : look here https://gis.stackexchange.com/questions/489159/using-sf-r-to-split-polygons-based-on-lines
+- Label the chunks with region ID starting with 1 at the most north
+
+
+
+
+```{r}
+# Extract latitude breakpoints and sort from north to south
+latitude_breaks <- sort(ca_breaks$POINT_Y, decreasing = TRUE)
+
+```
+
