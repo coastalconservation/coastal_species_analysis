@@ -21,9 +21,28 @@ Table with lat long points to break up the state into 100 km chunks
 Currently in drive folder data_and_methods
 
 
+2019 TIGER/Line® Shapefiles: Coastline
+https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2019&layergroup=Coastline
+
+Ca state shapefile 
+https://data.ca.gov/dataset/ca-geographic-boundaries
+
 ```{r}
 # Read in lat long division file 
 ca_breaks <- read_csv(here('data', 'raw', 'mapping', 'CA_coast_021425.csv'))
+
+# California coastline basemap 
+ca_coastline <- st_read(here('data', 'raw', 'tl_2019_us_coastline', 'tl_2019_us_coastline.shp'))
+
+# Filter to pacific only 
+ca_coastline <- ca_coastline |> 
+  filter(NAME == "Pacific")
+
+# California state basemap 
+ca_basemap <- st_read(here('data', 'raw', 'ca_state', 'CA_State.shp'))
+
+# Dangermond shapefile 
+dangermond <- st_read(here('data', 'raw', 'dangermond_shapefile', 'jldp_boundary.shp'))
 ```
 
 
@@ -171,4 +190,35 @@ tm_shape(ca_regions_df) +
     tm_polygons("region_id", palette = "viridis") 
 ```
 
+Add base map 
+```{r}
+
+st_crs(ca_coastline) == st_crs(ca_regions_df)
+
+# Transform to match 
+ca_coastline <- st_transform(ca_coastline, crs = st_crs(ca_regions_df))
+ca_basemap <- st_transform(ca_basemap, crs = st_crs(ca_regions_df))
+dangermond <- st_transform(dangermond, crs = st_crs(ca_regions_df))
+```
+
+
+```{r}
+# Bounding box to ca 100 regions 
+ca_regions_bbox <- st_bbox(ca_regions_df)
+# View basemap 
+
+tm_shape(ca_basemap) + 
+  tm_borders() + 
+tm_shape(ca_regions_df) + 
+  tm_fill(col = "grey80") + 
+tm_shape(ca_regions_df) + 
+  tm_borders(col = "grey40") + 
+tm_shape(dangermond) + 
+  tm_fill(col = "red") + 
+tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
+  tm_lines() + 
+  
+  tm_scale_bar(position = c(0.02, 0.02)) + # scale bar
+  tm_compass(position = c(0.01, 0.08), text.size = 0.5) # compass
+```
 
