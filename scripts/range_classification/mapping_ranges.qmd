@@ -164,7 +164,7 @@ centroids <- st_centroid(split_polygons)
 # Create a data frame with region IDs based on latitude
 ca_regions_df <- st_as_sf(split_polygons) |> 
   # Create region_id to indentify each region 
-  mutate(region_id = rank(-st_coordinates(centroids)[, 2]))  # Rank centroids by descending latitude
+  mutate(region_id = rank(st_coordinates(centroids)[, 2]))  # Rank centroids by descending latitude
 
 # View results 
 tm_shape(ca_regions_df) + 
