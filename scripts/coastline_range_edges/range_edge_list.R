@@ -1,0 +1,43 @@
+# Load required libraries
+library(tidyverse)  # Includes core packages for data manipulation (e.g., dplyr, ggplot2)
+library(sf)         # For spatial data handling and manipulation
+library(here)       # For file path management, ensuring portability across systems
+
+# Source external R scripts for custom functions
+source(here::here('scripts', 'R', 'MarineBioClean.R'))  # Custom function for cleaning biodiversity data
+source(here::here('scripts', 'coastline_range_edges', 'species_range_function.R'))  # Custom function for analyzing species range
+
+# Read shapefile for the Dangermond region (spatial data)
+dangermond <- read_sf(here('data', 'dangermond_shapefile', 'jldp_boundary.shp'))
+
+# Load coastline segments data, rename columns, convert to spatial format, and add segment ID
+coastline_segments <- read_csv(here::here("data", "coastal_spatial_data",
+                                          "CA_coast_segments.csv"), show_col_types = FALSE) %>% 
+  rename(lat = POINT_Y, long = POINT_X) %>%  # Renaming columns for clarity
+  st_as_sf(coords = c("long", "lat"), crs = st_crs(dangermond), remove = FALSE) %>%  # Convert to sf object with correct CRS
+  mutate(segment_id = 1:nrow(.))  # Add unique ID for each coastline segment
+
+# Clean and process biodiversity data using custom function
+biodiv_merge <- MarineBioClean(cbs_excel_name = 'cbs_data_2025.xlsx', 
+                               point_contact_sheet = 'point_contact_summary_layered',
+                               quadrat_sheet = 'quadrat_summary_data',
+                               swath_sheet = 'swath_summary_data')
+
+# Summarize biodiversity data by grouping by site, species, and year, and calculate total counts
+biodiv_total <- biodiv_merge %>% 
+  group_by(marine_site_name, latitude, longitude, species_lump, year) %>% 
+  summarise(num_count = sum(total_count)) %>%  # Sum the count of species observed
+  mutate(presence = case_when(num_count >= 1 ~ 1, TRUE ~ 0))  # Determine presence/absence based on num_count
+
+# Sort the latitudes of the coastline segments in ascending order
+coastline_lat <- coastline_segments$lat %>% sort(decreasing = FALSE)
+
+# Loop over coastline segments, calculate species range, and collect results into a list
+range_list <- map_dfr(1:(length(coastline_lat) - 1), function(i) {
+  species_range(biodiv_total, coastline_lat[i], coastline_lat[i + 1]) %>%
+    mutate(range_lat = paste(round(coastline_lat[i], 2), round(coastline_lat[i + 1], 2), sep = "-"),  # Create a range label
+           id = i)  # Assign segment ID to each result
+})
+
+# Return the compiled range list
+return(range_list)
