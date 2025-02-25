@@ -1,0 +1,47 @@
+---
+title: "ssdm_modeling_test"
+format: html
+---
+
+The purpose of this document is to practice using the species distribution modeling package `ssdm` 
+
+```{r}
+# Load packages 
+library(SSDM)
+library(biooracler)
+library(raster)
+library(terra)
+```
+
+
+## Environmental rasters from BioOracle 
+
+Variables 
+
+air temperature = tas / mixed layer depth = mlotst / ocean temperature = thetao / salinity = so / cloud fraction = clt / oxygen = o2
+
+
+#### Downloading Layers 
+```{r}
+biooracler::list_layers()
+
+# List layers of interest 
+layer_list <-c("tas_baseline_2000_2020_depthsurf", # air temp 
+               "o2_baseline_2000_2018_depthmax", # oxygen 
+               "mlotst_baseline_2000_2019_depthsurf", # mixed layer depth 
+               "thetao_baseline_2000_2019_depthsurf", # ocean temp 
+               "so_baseline_2000_2019_depthsurf", # salinty 
+               "clt_baseline_2000_2020_depthsurf") # cloud cover 
+
+# Set constrants 
+time = c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z') # time from info_layers()
+latitude = c(32, 43)
+longitude = c(-126, -116)
+
+constraints = list(time, latitude, longitude)
+names(constraints) = c("time", "latitude", "longitude")
+
+```
+
+
+
