@@ -14,7 +14,7 @@
 #' @examples
 MarineBioClean <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swath_sheet) {
   #..........................Create paths..........................
-  input_path <- here::here('data', 'raw', cbs_excel_name)
+  input_path <- here::here('data', 'raw', 'cbs_data_2025.xlsx')
   output_folder <- here::here('data', 'processed')
   output_file <- file.path(output_folder, "clean_biodiv.csv")
   
@@ -27,37 +27,37 @@ MarineBioClean <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, s
   # Clean point_contact dataset 
   point_contact_clean <- point_contact_raw %>% 
     # Remove non-matching columns 
-    select(!c('number_of_transect_locations', 'percent_cover')) %>% 
+    dplyr::select(-c('number_of_transect_locations', 'percent_cover')) %>% 
     # Rename num of hits to total count 
-    rename(total_count = number_of_hits) %>% 
+    dplyr::rename(total_count = number_of_hits) %>% 
     # Create new data collection source column 
-    mutate(collection_source = "point contact") %>% 
+    dplyr::mutate(collection_source = "point contact") %>% 
     # Filter to mainland only 
-    filter(island == "Mainland") %>% 
+    dplyr::filter(island == "Mainland") %>% 
     # Remove certain species lumps 
-    filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
+    dplyr::filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
   
   # Clean quadrat dataset 
   quadrat_clean <- quadrat_raw %>% 
     # Remove non-matching columns 
-    select(!c('number_of_quadrats_sampled', 'total_area_sampled_m2', 'density_per_m2')) %>% 
+    dplyr::select(-c('number_of_quadrats_sampled', 'total_area_sampled_m2', 'density_per_m2')) %>% 
     # Create new data collection source column 
-    mutate(collection_source = "quadrat") %>% 
+    dplyr::mutate(collection_source = "quadrat") %>% 
     # Filter to mainland only 
-    filter(island == "Mainland") %>% 
+    dplyr::filter(island == "Mainland") %>% 
     # Remove certain species lumps 
-    filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
+    dplyr::filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
   
   # Clean swath dataset 
   swath_clean <- swath_raw %>% 
     # Remove non-matching columns 
-    select(!c('number_of_transects_sampled', 'est_swath_area_searched_m2',  'density_per_m2')) %>% 
+    dplyr::select(-c('number_of_transects_sampled', 'est_swath_area_searched_m2',  'density_per_m2')) %>% 
     # Create new data collection source column 
-    mutate(collection_source = "swath") %>% 
+    dplyr::mutate(collection_source = "swath") %>% 
     # Filter to mainland only 
-    filter(island == "Mainland") %>% 
+    dplyr::filter(island == "Mainland") %>% 
     # Remove certain species lumps 
-    filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
+    dplyr::filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
   
   #....................Merge datasets together.....................
   clean_biodiv <- bind_rows(point_contact_clean, quadrat_clean, swath_clean)
