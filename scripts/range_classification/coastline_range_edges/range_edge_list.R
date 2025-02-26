@@ -5,16 +5,17 @@ library(here)       # For file path management, ensuring portability across syst
 
 # Source external R scripts for custom functions
 source(here::here('scripts', 'R', 'MarineBioClean.R'))  # Custom function for cleaning biodiversity data
-source(here::here('scripts', 'coastline_range_edges', 'species_range_function.R'))  # Custom function for analyzing species range
+source(here::here('scripts', 'range_classification', 
+                  'coastline_range_edges', 'species_range_function.R'))  # Custom function for analyzing species range
 
-# Read shapefile for the Dangermond region (spatial data)
-dangermond <- read_sf(here('data', 'dangermond_shapefile', 'jldp_boundary.shp'))
+# CA coastal zone boundary 
+ca_boundary <- st_read(here('data', 'raw', 'mapping', 'ds990.gdb'))
 
 # Load coastline segments data, rename columns, convert to spatial format, and add segment ID
 coastline_segments <- read_csv(here::here("data", "coastal_spatial_data",
                                           "CA_coast_segments.csv"), show_col_types = FALSE) %>% 
   rename(lat = POINT_Y, long = POINT_X) %>%  # Renaming columns for clarity
-  st_as_sf(coords = c("long", "lat"), crs = st_crs(dangermond), remove = FALSE) %>%  # Convert to sf object with correct CRS
+  st_as_sf(coords = c("long", "lat"), crs = st_crs(ca_boundary), remove = FALSE) %>%  # Convert to sf object with correct CRS
   mutate(segment_id = 1:nrow(.))  # Add unique ID for each coastline segment
 
 # Clean and process biodiversity data using custom function
@@ -39,5 +40,8 @@ range_list <- map_dfr(1:(length(coastline_lat) - 1), function(i) {
            id = i)  # Assign segment ID to each result
 })
 
+write.csv(range_list, here::here("data", 
+                                 "processed",
+                                 "range_list.csv"), row.names = FALSE)
 # Return the compiled range list
 return(range_list)

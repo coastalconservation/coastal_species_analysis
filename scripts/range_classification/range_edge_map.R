@@ -1,0 +1,136 @@
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+library(lwgeom) # for st_split
+
+# -------------------------- Load Data -------------------------- #
+
+# Read in lat long division file 
+ca_breaks <- read_csv(here('data', 'raw', 'mapping', 'CA_coast_021425.csv'))
+
+# California coastline basemap 
+ca_coastline <- st_read(here('data', 'raw', 'tl_2019_us_coastline', 'tl_2019_us_coastline.shp'))
+
+# Filter to pacific only 
+ca_coastline <- ca_coastline |> 
+  filter(NAME == "Pacific")
+
+# California state basemap 
+ca_basemap <- st_read(here('data', 'raw', 'ca_state', 'CA_State.shp'))
+
+# Dangermond shapefile 
+dangermond <- st_read(here('data', 'raw', 'dangermond_shapefile', 'jldp_boundary.shp'))
+
+# CA coastal zone boundary 
+ca_boundary <- st_read(here('data', 'raw', 'mapping', 'ds990.gdb'))
+
+# Range Edges
+range_edges <- read_csv(here("data", "processed", "range_list.csv"))
+
+# ------------------------- Manipulation ------------------------- # 
+
+# Assign polygon labels 
+ca_boundary <- ca_boundary |>
+  mutate(polygon_id = row_number())
+
+# Filter to mainland only 
+ca_mainland <- ca_boundary |> 
+  filter(polygon_id == 8)
+
+#st_crs(ca_boundary) #  NAD83 / California Albers 
+
+# Apply 10,000 m  buffer to coastal zones 
+ca_zones_extended <- st_buffer(ca_mainland, dist = 30000)
+
+
+# Determine bounding box of original zones for y dimensions 
+ca_zones_bbox <- st_bbox(ca_mainland)
+#print(ca_zones_bbox) # ymax = 450609.7 ymin = -605049.7
+
+# Determine bounding box of extended zones for x dimensions 
+extend_box <- st_bbox(ca_zones_extended)
+#print(extend_box) #xmax = 308316.5 xmin = -414570.2
+
+# Create polygon of new bounds 
+crop_bbox <- st_bbox(c(
+  xmin = -414570.2,
+  ymin = -605049.7,
+  xmax = 308316.5,
+  ymax = 450609.7
+), crs = st_crs(ca_zones_extended))
+
+crop_polygon <- st_as_sfc(crop_bbox)
+
+# Crop the extended zones using the bounding box polygon
+ca_zones_crop <- st_intersection(crop_polygon, ca_zones_extended)
+
+# Transform to WGS84 which uses degrees 
+ca_zones_crop <- st_transform(ca_zones_crop, crs = "WGS84")
+
+# Extract latitude breakpoints and sort from north to south
+latitude_breaks <- sort(ca_breaks$POINT_Y, decreasing = TRUE)
+
+
+# Create spliting lines from latitudes (longs from bbox of ca_zones_crop)
+split_lines <- st_sfc(
+  lapply(latitude_breaks, function(lat) {
+    st_linestring(matrix(c(-124.8, lat, -116.7, lat), ncol = 2, byrow = TRUE))
+  }),
+  crs = st_crs(ca_zones_crop)
+)
+
+# Combine linestrings into single geometry 
+split_lines_all <- st_union(split_lines)
+
+# Split the coastal buffer by latitudes 
+split_result <- st_split(ca_zones_crop, split_lines_all)
+
+# Convert the resulting geometry collection into polygons
+split_polygons <- st_collection_extract(split_result, "POLYGON")
+
+# Locate center of each polygon 
+centroids <- st_centroid(split_polygons)
+
+# Create a data frame with region IDs based on latitude
+ca_regions_df <- st_as_sf(split_polygons) |> 
+  # Create region_id to indentify each region 
+  mutate(region_id = rank(st_coordinates(centroids)[, 2]))  # Rank centroids by descending latitude
+
+# Transform to match 
+ca_coastline <- st_transform(ca_coastline, crs = st_crs(ca_regions_df))
+ca_basemap <- st_transform(ca_basemap, crs = st_crs(ca_regions_df))
+dangermond <- st_transform(dangermond, crs = st_crs(ca_regions_df))
+
+# Bounding box to ca 100 regions 
+ca_regions_bbox <- st_bbox(ca_regions_df)
+
+# Nothern Range Edges
+northern_range_edges <- range_edges |> 
+  filter(range_edge_category == "Northern Range Edge") %>% 
+  group_by(id) %>% 
+  summarise(species_counts = n()) %>% 
+  ungroup()
+
+range_edges_merge <- northern_range_edges |> 
+  left_join(ca_regions_df, by = c("id" = "region_id")) %>%
+  st_as_sf()
+
+# -------------------------- Mapping -------------------------- #
+# View basemap 
+
+tm_shape(ca_basemap) + 
+  tm_borders() + 
+tm_shape(range_edges_merge) + 
+  tm_fill(col = "species_counts", palette = "YlOrRd") +
+tm_shape(range_edges_merge) + 
+  tm_borders(col = "grey40") + 
+tm_shape(dangermond) + 
+  tm_fill(col = "blue") + 
+tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
+  tm_lines() + 
+  tm_layout(legend.position = c("right", "top")) +
+  tm_scale_bar(position = c(0.02, 0.02)) + # scale bar
+  tm_compass(position = c(0.01, 0.08), text.size = 0.5) # compass
+
+
