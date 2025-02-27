@@ -15,12 +15,12 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
   csb_range_edge <- cbs_clean %>%
     group_by(species_lump) %>%
     summarize(
-      present_below_south = any(latitude < south_lat & presence == 1),
-      present_within_buffer = any(latitude >= south_lat & latitude <= north_lat & presence == 1),
-      present_above_north = any(latitude > north_lat & presence == 1),
+      present_below_south = any(latitude < south_lat & presence == TRUE),
+      present_within_buffer = any(latitude >= south_lat & latitude <= north_lat & presence == TRUE),
+      present_above_north = any(latitude > north_lat & presence == TRUE),
       
       # Observations where Present
-      present_observations_site = sum(latitude >= south_lat & latitude <= north_lat & presence == 1, 
+      present_observations_site = sum(latitude >= south_lat & latitude <= north_lat & presence == TRUE, 
                                       na.rm = TRUE),
       
       # Observations Present/Absence
@@ -39,7 +39,7 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
       total_counts = sum(num_count, na.rm = TRUE),
       
       # Fraction of years present
-      percent_years_present = n_distinct(year[latitude >= south_lat & latitude <= north_lat & presence == 1]) / 
+      percent_years_present = n_distinct(year[latitude >= south_lat & latitude <= north_lat & presence == TRUE]) / 
         n_distinct(year) * 100
     ) %>%
     mutate(

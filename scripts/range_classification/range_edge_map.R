@@ -106,14 +106,17 @@ dangermond <- st_transform(dangermond, crs = st_crs(ca_regions_df))
 ca_regions_bbox <- st_bbox(ca_regions_df)
 
 # Nothern Range Edges
-northern_range_edges <- range_edges |> 
-  filter(range_edge_category == "Northern Range Edge") %>% 
+all_range_edges <- range_edges |> 
+  filter(range_edge_category  %in% c("Northern Range Edge",
+                                     "Southern Range Edge",
+                                     "Endemic Presence")) %>% 
   group_by(id) %>% 
   summarise(species_counts = n()) %>% 
   ungroup()
 
-range_edges_merge <- northern_range_edges |> 
+range_edges_merge <- all_range_edges |> 
   left_join(ca_regions_df, by = c("id" = "region_id")) %>%
+  filter(id  %in% seq(2,17)) %>% 
   st_as_sf()
 
 # -------------------------- Mapping -------------------------- #
@@ -122,14 +125,18 @@ range_edges_merge <- northern_range_edges |>
 tm_shape(ca_basemap) + 
   tm_borders() + 
 tm_shape(range_edges_merge) + 
-  tm_fill(col = "species_counts", palette = "YlOrRd") +
+  tm_fill(col = "species_counts", 
+          title = "# Range Edges", 
+          palette = "YlOrRd") +
 tm_shape(range_edges_merge) + 
   tm_borders(col = "grey40") + 
 tm_shape(dangermond) + 
   tm_fill(col = "blue") + 
 tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
   tm_lines() + 
-  tm_layout(legend.position = c("right", "top")) +
+  tm_layout(legend.title.size = 1.5,     # Adjust legend title size
+            legend.text.size = 1,        # Adjust legend text size
+            legend.title.fontface = "bold") + # Make title bold 
   tm_scale_bar(position = c(0.02, 0.02)) + # scale bar
   tm_compass(position = c(0.01, 0.08), text.size = 0.5) # compass
 

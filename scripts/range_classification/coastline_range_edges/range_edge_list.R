@@ -12,8 +12,7 @@ source(here::here('scripts', 'range_classification',
 ca_boundary <- st_read(here('data', 'raw', 'mapping', 'ds990.gdb'))
 
 # Load coastline segments data, rename columns, convert to spatial format, and add segment ID
-coastline_segments <- read_csv(here::here("data", "coastal_spatial_data",
-                                          "CA_coast_segments.csv"), show_col_types = FALSE) %>% 
+ca_breaks <- read_csv(here('data', 'raw', 'mapping', 'CA_coast_021425.csv')) %>% 
   rename(lat = POINT_Y, long = POINT_X) %>%  # Renaming columns for clarity
   st_as_sf(coords = c("long", "lat"), crs = st_crs(ca_boundary), remove = FALSE) %>%  # Convert to sf object with correct CRS
   mutate(segment_id = 1:nrow(.))  # Add unique ID for each coastline segment
@@ -28,10 +27,12 @@ biodiv_merge <- MarineBioClean(cbs_excel_name = 'cbs_data_2025.xlsx',
 biodiv_total <- biodiv_merge %>% 
   group_by(marine_site_name, latitude, longitude, species_lump, year) %>% 
   summarise(num_count = sum(total_count)) %>%  # Sum the count of species observed
-  mutate(presence = case_when(num_count >= 1 ~ 1, TRUE ~ 0))  # Determine presence/absence based on num_count
+  mutate(presence = case_when(num_count >= 1 ~ TRUE, TRUE ~ FALSE))  # Determine presence/absence based on num_count
 
 # Sort the latitudes of the coastline segments in ascending order
-coastline_lat <- coastline_segments$lat %>% sort(decreasing = FALSE)
+# Add one chunk above one below then drop it
+coastline_lat <- ca_breaks$lat%>% 
+  sort(decreasing = FALSE) 
 
 # Loop over coastline segments, calculate species range, and collect results into a list
 range_list <- map_dfr(1:(length(coastline_lat) - 1), function(i) {
