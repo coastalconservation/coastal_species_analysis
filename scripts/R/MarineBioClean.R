@@ -60,7 +60,7 @@ MarineBioClean <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, s
     dplyr::filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
   
   #....................Merge datasets together.....................
-  clean_biodiv <- bind_rows(point_contact_clean, quadrat_clean, swath_clean)
+  clean_biodiv <- dplyr::bind_rows(point_contact_clean, quadrat_clean, swath_clean)
   
   # Return merged dataframe 
   return(clean_biodiv)

@@ -7,10 +7,16 @@ The purpose of this document is to practice using the species distribution model
 
 ```{r}
 # Load packages 
+library(tidyverse)
+library(dplyr)
 library(SSDM)
 library(biooracler)
 library(raster)
 library(terra)
+library(purrr)
+
+# Load functions 
+source(here::here('scripts', 'R', 'MarineBioClean.R'))
 ```
 
 
@@ -23,23 +29,82 @@ air temperature = tas / mixed layer depth = mlotst / ocean temperature = thetao 
 
 #### Downloading Layers 
 ```{r}
-biooracler::list_layers()
+library(biooracler)
+library(terra)
+library(purrr)
 
-# List layers of interest 
-layer_list <-c("tas_baseline_2000_2020_depthsurf", # air temp 
-               "o2_baseline_2000_2018_depthmax", # oxygen 
-               "mlotst_baseline_2000_2019_depthsurf", # mixed layer depth 
-               "thetao_baseline_2000_2019_depthsurf", # ocean temp 
-               "so_baseline_2000_2019_depthsurf", # salinty 
-               "clt_baseline_2000_2020_depthsurf") # cloud cover 
+# Define layers of interest
+layer_list <- c("tas_baseline_2000_2020_depthsurf",
+                "o2_baseline_2000_2018_depthmax",
+                "mlotst_baseline_2000_2019_depthsurf",
+                "thetao_baseline_2000_2019_depthsurf",
+                "so_baseline_2000_2019_depthsurf",
+                "clt_baseline_2000_2020_depthsurf")
 
-# Set constrants 
-time = c('2000-01-01T00:00:00Z', '2010-01-01T00:00:00Z') # time from info_layers()
-latitude = c(32, 43)
-longitude = c(-126, -116)
+# Define constraints
+# WHY IS THIS TIME SELECTED 
+constraints <- list(time = c('2000-01-01T00:00:00Z', '2000-01-01T00:00:00Z'),
+                    latitude = c(32, 43),
+                    longitude = c(-126, -116))
 
-constraints = list(time, latitude, longitude)
-names(constraints) = c("time", "latitude", "longitude")
+# Define file path
+outpath <- file.path("~/Desktop/MEDS/capstone/coastal_species_analysis/data/raw/BioOrc_rasters/")
+dir.create(outpath, showWarnings = FALSE, recursive = TRUE)
+
+# Download, filter, and save rasters
+walk(layer_list, ~{
+  r <- download_layers(dataset_id = .x, constraints = constraints, fmt = "raster")
+  r_sub <- subset(r, grep('_mean', names(r), value = TRUE))
+  terra::writeRaster(r_sub, file = file.path(outpath, paste0(.x, "_mean_00.tif")), overwrite = TRUE, filetype="GTiff")
+})
+
+# Cleanup any unwanted files
+file.remove(list.files(outpath, pattern = ".axu.json$", full.names = TRUE))
+
+# Read and stack rasters
+env_00 <- terra::rast(list.files(outpath, pattern="mean_00.tif", full.names=TRUE))
+
+```
+
+
+```{r}
+# View rasters 
+print(env_00)
+
+
+terra::ext(env_00)  # Check spatial extent
+terra::res(env_00)  # Check resolution
+terra::crs(env_00)
+
+
+terra::plot(env_00)
+```
+
+
+## MARINe Biodiversity 
+```{r}
+biodiv_2025 <- MarineBioClean(cbs_excel_name = 'cbs_data_2025.xlsx', 
+                              point_contact_sheet = 'point_contact_summary_layered',
+                              quadrat_sheet = 'quadrat_summary_data',
+                              swath_sheet = 'swath_summary_data')
+
+# Group by site and species (no year)
+biodiv_total <- biodiv_2025 %>% 
+  group_by(marine_site_name, latitude, longitude, species_lump) %>% 
+  summarise(num_count = sum(total_count))
+
+# Create column to indicate presence/absence
+biodiv_total <- biodiv_total %>% 
+  mutate(presence = ifelse(num_count >= 1, 1, 0))
+
+# Remove rows when presence = 0 
+biodiv_presence <- biodiv_total |> 
+  filter(presence == 1) |> 
+  dplyr::select(c(species_lump, latitude, longitude, presence))
+
+# Pick species with Northern Range Edge in Dangermond 
+spp1 <- biodiv_presence |> 
+  filter(species_lump == "Jania verrucosa")
 
 ```
 
