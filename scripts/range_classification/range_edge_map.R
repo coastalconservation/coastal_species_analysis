@@ -41,7 +41,7 @@ ca_mainland <- ca_boundary |>
 #st_crs(ca_boundary) #  NAD83 / California Albers 
 
 # Apply 10,000 m  buffer to coastal zones 
-ca_zones_extended <- st_buffer(ca_mainland, dist = 30000)
+ca_zones_extended <- st_buffer(ca_mainland, dist = 10000)#0)
 
 
 # Determine bounding box of original zones for y dimensions 
@@ -115,75 +115,97 @@ all_range_edges <- range_edges |>
   ungroup()
 
 range_edges_merge <- all_range_edges |> 
-  left_join(ca_regions_df, by = c("id" = "region_id")) %>%
-  filter(id  %in% seq(3,16)) %>% 
+  left_join(ca_regions_df, by = c("id" = "region_id")) %>% 
   st_as_sf()
 
+edge16 <- range_edges_merge |> 
+  filter(id == 16)
+
 south_range_edges <- range_edges_merge %>% 
-  filter(range_edge_category == "Southern Range Edge")
+  filter(range_edge_category == "Southern Range Edge") %>%
+  filter(id  %in% seq(3,17)) %>%  
+  rbind(edge16) 
+  
+south_range_edges[south_range_edges$id == 16,
+                  "range_edge_category"] <- "Southern Range Edge"
+south_range_edges[south_range_edges$id == 16,
+                  "species_counts"] <- 0
 
 north_range_edges <- range_edges_merge %>% 
-  filter(range_edge_category == "Northern Range Edge")
+  filter(range_edge_category == "Northern Range Edge") %>%
+  filter(id  %in% seq(2,16)) 
+
+dangermond_range_edges <- range_edges_merge %>% 
+  filter(id  %in% seq(6,7))
 
 # -------------------------- Mapping -------------------------- #
 # View basemap 
 
-tm_shape(ca_basemap) + 
-  tm_borders() + 
-tm_shape(range_edges_merge) + 
-  tm_fill(col = "species_counts", 
-          title = "# Range Edges", 
-          palette = "OrRd") +
-tm_shape(range_edges_merge) + 
-  tm_borders(col = "grey40") + 
-tm_shape(dangermond) + 
-  tm_fill(col = "blue") + 
-tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
-  tm_lines() + 
-  tm_layout(legend.title.size = 1.5,     # Adjust legend title size
-            legend.text.size = 1,        # Adjust legend text size
-            legend.title.fontface = "bold") + # Make title bold 
-  tm_scale_bar(position = c(0.02, 0.02)) + # scale bar
-  tm_compass(position = c(0.01, 0.08), text.size = 0.5) # compass
+# tm_shape(ca_basemap) + 
+#   tm_borders() + 
+# tm_shape(range_edges_merge) + 
+#   tm_fill(col = "species_counts", 
+#           title = "# Range Edges", 
+#           palette = "Reds") +
+# tm_shape(range_edges_merge) + 
+#   tm_borders(col = "grey40") + 
+# tm_shape(dangermond) + 
+#   tm_fill(col = "blue") + 
+# tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
+#   tm_lines() + 
+#   tm_layout(legend.title.size = 1.5,     # Adjust legend title size
+#             legend.text.size = 1,        # Adjust legend text size
+#             legend.title.fontface = "bold") + # Make title bold 
+#   tm_scale_bar(position = c(0.02, 0.02)) + # scale bar
+#   tm_compass(position = c(0.01, 0.08), text.size = 0.5) # compass
 
-tm_shape(ca_basemap) + 
+nre_plot <- tm_shape(ca_basemap) + 
   tm_borders() + 
   # Northern Range Edges
 tm_shape(north_range_edges) +   
   tm_fill(col = "species_counts", 
-          title = "# Species\nNorthern Range Edges",
-          palette = "OrRd",
-          breaks=c(1, 6, 11, 15)) +
-  tm_shape(range_edges_merge) + 
-  tm_borders(col = "grey40") + 
+          title = "# of Taxon with\nNorthern Range Edges",
+          palette = colorRampPalette(c("#DEF5E5FF", "#96DDB5FF", "#49C1ADFF"))(3),
+          breaks=c(0, 5, 10, 15)) +
+  tm_shape(north_range_edges) + 
+  tm_borders(col = "#32292F") + 
+  tm_shape(dangermond_range_edges) +
+  tm_borders(col = "#161215") +
   tm_shape(dangermond) + 
-  tm_fill(col = "blue") + 
-  tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
+  tm_fill(col = "#705D56") + 
+  tm_shape(ca_coastline, bbox = ca_basemap) + 
   tm_lines() + 
   tm_layout(legend.title.size = 1.5,     # Adjust legend title size
             legend.text.size = 1,        # Adjust legend text size
-            legend.title.fontface = "bold") + # Make title bold 
-  tm_scale_bar(position = c(0.02, 0.02), text.size = 3) + # scale bar
-  tm_compass(position = c(0.01, 0.08), text.size = .5) # compass
+            legend.title.fontface = "bold", # Make title bold 
+            inner.margins = c(0.02, 0.05, 0.1, 0.1), # Adjust margins
+            frame = FALSE) #+ 
+  #tm_scale_bar(position = c(0.02, 0.02), text.size = 3) + # scale bar
+  #tm_compass(position = c(0.01, 0.08), text.size = .5) # compass
 
-tm_shape(ca_basemap) + 
+sre_plot <- tm_shape(ca_basemap) + 
   tm_borders() + 
 # Southern Range Edges
 tm_shape(south_range_edges) + 
-  tm_fill(col = "species_counts", 
-          title = "# Species\nSouthern Range Edges",
-          palette = "OrRd",
-          breaks=c(0, 16, 31, 45)) +
-  tm_shape(range_edges_merge) + 
-  tm_borders(col = "grey40") + 
+  tm_fill(col = "species_counts",
+          title = "# of Taxon with\nSouthern Range Edges",
+          palette = colorRampPalette(c("#359EAAFF",  "#3B5698FF", "#2B1C35FF"))(3),
+          breaks = c(0, 15, 30, 45)) +
+  tm_shape(south_range_edges) + 
+  tm_borders(col = "#32292F") + 
+  tm_shape(dangermond_range_edges) +
+  tm_borders(col = "#161215") +
   tm_shape(dangermond) + 
-  tm_fill(col = "blue") + 
+  tm_fill(col = "#705D56") + 
   tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
   tm_lines() + 
   tm_layout(legend.title.size = 1.5,     # Adjust legend title size
             legend.text.size = 1,        # Adjust legend text size
-            legend.title.fontface = "bold") + # Make title bold 
-  tm_scale_bar(position = c(0.02, 0.02), text.size = 3) + # scale bar
-  tm_compass(position = c(0.01, 0.08), text.size = .5) # compass
+            legend.title.fontface = "bold", # Make title bold 
+            inner.margins = c(0.02, 0.05, 0.1, 0.1), # Adjust margins
+            frame = FALSE) #+ # Make title bold 
+  #tm_scale_bar(position = c(0.02, 0.02), text.size = 3) + # scale bar
+  #tm_compass(position = c(0.01, 0.08), text.size = .5) # compass
 
-
+tmap_save(filename=here("plots", "figures", "nre_plot.png"), tm=nre_plot, dpi=600)
+tmap_save(filename=here("plots", "figures", "sre_plot.png"), tm=sre_plot, dpi=600)
