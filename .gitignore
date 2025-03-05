@@ -1,5 +1,7 @@
-# Raw data files 
+# Data files 
 data/raw/
+data/model_processed
+
 
 # History files
 .Rhistory
