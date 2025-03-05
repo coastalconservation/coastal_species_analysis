@@ -121,7 +121,7 @@ marine_sites <- biodiv_merge %>%
 coastline_lat <- ca_breaks$lat%>% 
   sort(decreasing = FALSE) 
 
-marine_sites <- marine_sites %>%
+marine_sites_geo <- marine_sites %>%
   rowwise() %>%
   mutate(
     id = which(latitude >= coastline_lat[-length(coastline_lat)] & latitude < coastline_lat[-1])[1],
@@ -133,14 +133,20 @@ marine_sites <- marine_sites %>%
   left_join(ca_regions_df, by = c("id" = "region_id")) %>% 
   st_as_sf()
 
+marine_sites_sum <- marine_sites_geo %>% 
+  group_by(id) %>% 
+  summarize(site_counts = n()) %>% 
+  ungroup()
+
 tm_shape(ca_basemap) + 
   tm_borders() + 
   # Southern Range Edges
-  tm_shape(marine_sites) + 
-  tm_fill(col = "id",
+  tm_shape(marine_sites_sum) + 
+  tm_fill(col = "site_counts",
           title = "# of Marine Sites\nPer Coastal Segment",
-          palette = "Greens") +
-  tm_shape(marine_sites) + 
+          palette = "Greens",
+          style = "cont") +
+  tm_shape(marine_sites_sum) + 
   tm_borders(col = "#32292F") + 
   tm_shape(dangermond) + 
   tm_fill(col = "#705D56") + 
@@ -149,8 +155,9 @@ tm_shape(ca_basemap) +
   tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
   tm_lines() + 
   tm_layout(legend.position = c(0.45, 0.65),
-            legend.title.size = 1.2,       # Adjust legend text size
-            legend.height = -.2,
+            legend.title.size = 2,       # Adjust legend text size
+            #legend.height = -.2,
+            legend.text.size = 1.5,        # Adjust legend text size
             legend.title.fontface = "bold", # Make title bold 
             inner.margins = c(0.02, 0.05, 0.1, 0.15), # Adjust margins
             frame = FALSE) 
