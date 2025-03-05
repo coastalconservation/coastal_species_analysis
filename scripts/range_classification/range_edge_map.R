@@ -3,21 +3,18 @@ library(here)
 library(sf)
 library(tmap)
 library(lwgeom) # for st_split
+library(units)
 
 # -------------------------- Load Data -------------------------- #
 
 # Read in lat long division file 
 ca_breaks <- read_csv(here('data', 'raw', 'mapping', 'CA_coast_021425.csv'))
 
-# California coastline basemap 
-ca_coastline <- st_read(here('data', 'raw', 'tl_2019_us_coastline', 'tl_2019_us_coastline.shp'))
-
-# Filter to pacific only 
-ca_coastline <- ca_coastline |> 
-  filter(NAME == "Pacific")
-
 # California state basemap 
 ca_basemap <- st_read(here('data', 'raw', 'ca_state', 'CA_State.shp'))
+
+# California coastline basemap 
+ca_coastline <- st_read(here('data', 'raw', 'mapping', 'CZB', 'Statewide_CoastalZoneBoundary_Cadastral.shp'))
 
 # Dangermond shapefile 
 dangermond <- st_read(here('data', 'raw', 'dangermond_shapefile', 'jldp_boundary.shp'))
@@ -98,8 +95,11 @@ ca_regions_df <- st_as_sf(split_polygons) |>
   mutate(region_id = rank(st_coordinates(centroids)[, 2]))  # Rank centroids by descending latitude
 
 # Transform to match 
-ca_coastline <- st_transform(ca_coastline, crs = st_crs(ca_regions_df))
-ca_basemap <- st_transform(ca_basemap, crs = st_crs(ca_regions_df))
+ca_coastline <- st_transform(ca_coastline, crs = st_crs(ca_regions_df)) %>% 
+  filter(!st_is_empty(.))
+ca_basemap <- st_transform(ca_basemap, crs = st_crs(ca_regions_df)) %>%
+  st_cast("POLYGON") %>% 
+  filter(st_area(.) > units::set_units(10000, "km^2"))
 dangermond <- st_transform(dangermond, crs = st_crs(ca_regions_df))
 
 # Bounding box to ca 100 regions 
@@ -125,7 +125,7 @@ south_range_edges <- range_edges_merge %>%
   filter(range_edge_category == "Southern Range Edge") %>%
   filter(id  %in% seq(3,17)) %>%  
   rbind(edge16) 
-  
+
 south_range_edges[south_range_edges$id == 16,
                   "range_edge_category"] <- "Southern Range Edge"
 south_range_edges[south_range_edges$id == 16,
@@ -162,9 +162,9 @@ dangermond_range_edges <- range_edges_merge %>%
 nre_plot <- tm_shape(ca_basemap) + 
   tm_borders() + 
   # Northern Range Edges
-tm_shape(north_range_edges) +   
+  tm_shape(north_range_edges) +   
   tm_fill(col = "species_counts", 
-          title = "# of Taxon with\nNorthern Range Edges",
+          title = "# of Taxa with\nNorthern Range Edges",
           palette = colorRampPalette(c("#DEF5E5FF", "#96DDB5FF", "#49C1ADFF"))(3),
           breaks=c(0, 5, 10, 15)) +
   tm_shape(north_range_edges) + 
@@ -173,22 +173,23 @@ tm_shape(north_range_edges) +
   tm_borders(col = "#161215") +
   tm_shape(dangermond) + 
   tm_fill(col = "#705D56") + 
+  tm_shape(dangermond) + 
+  tm_borders(col = "#161215") +
   tm_shape(ca_coastline, bbox = ca_basemap) + 
   tm_lines() + 
-  tm_layout(legend.title.size = 1.5,     # Adjust legend title size
-            legend.text.size = 1,        # Adjust legend text size
+  tm_layout(legend.position = c(0.45, 0.65),
+            legend.title.size = 1.4,     # Adjust legend title size       
+            legend.height = -.2,
             legend.title.fontface = "bold", # Make title bold 
-            inner.margins = c(0.02, 0.05, 0.1, 0.1), # Adjust margins
-            frame = FALSE) #+ 
-  #tm_scale_bar(position = c(0.02, 0.02), text.size = 3) + # scale bar
-  #tm_compass(position = c(0.01, 0.08), text.size = .5) # compass
+            inner.margins = c(0.02, 0.05, 0.1, 0.15), # Adjust margins
+            frame = FALSE) 
 
 sre_plot <- tm_shape(ca_basemap) + 
   tm_borders() + 
-# Southern Range Edges
-tm_shape(south_range_edges) + 
+  # Southern Range Edges
+  tm_shape(south_range_edges) + 
   tm_fill(col = "species_counts",
-          title = "# of Taxon with\nSouthern Range Edges",
+          title = "# of Taxa with\nSouthern Range Edges",
           palette = colorRampPalette(c("#359EAAFF",  "#3B5698FF", "#2B1C35FF"))(3),
           breaks = c(0, 15, 30, 45)) +
   tm_shape(south_range_edges) + 
@@ -197,15 +198,16 @@ tm_shape(south_range_edges) +
   tm_borders(col = "#161215") +
   tm_shape(dangermond) + 
   tm_fill(col = "#705D56") + 
+  tm_shape(dangermond) + 
+  tm_borders(col = "#161215") +
   tm_shape(ca_coastline, bbox = ca_regions_bbox) + 
   tm_lines() + 
-  tm_layout(legend.title.size = 1.5,     # Adjust legend title size
-            legend.text.size = 1,        # Adjust legend text size
+  tm_layout(legend.position = c(0.45, 0.65),
+            legend.title.size = 1.4,       # Adjust legend text size
+            legend.height = -.2,
             legend.title.fontface = "bold", # Make title bold 
-            inner.margins = c(0.02, 0.05, 0.1, 0.1), # Adjust margins
-            frame = FALSE) #+ # Make title bold 
-  #tm_scale_bar(position = c(0.02, 0.02), text.size = 3) + # scale bar
-  #tm_compass(position = c(0.01, 0.08), text.size = .5) # compass
+            inner.margins = c(0.02, 0.05, 0.1, 0.15), # Adjust margins
+            frame = FALSE) 
 
 tmap_save(filename=here("plots", "figures", "nre_plot.png"), tm=nre_plot, dpi=600)
 tmap_save(filename=here("plots", "figures", "sre_plot.png"), tm=sre_plot, dpi=600)
