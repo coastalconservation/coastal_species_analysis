@@ -3,8 +3,7 @@ title: "ssdm_modeling_test"
 format: html
 ---
 
-The purpose of this document is to practice using the species distribution modeling package `ssdm` 
-
+The purpose of this document is to practice using the species distribution modeling package `ssdm`
 
 After processing, the environmental rasters and the observation data are put into a folder within the data folder titled `model_processed`
 
@@ -23,15 +22,14 @@ library(shinyFiles) # For ssdm shiny interface
 source(here::here('scripts', 'R', 'MarineBioClean.R'))
 ```
 
+## Environmental rasters from BioOracle
 
-## Environmental rasters from BioOracle 
-
-Variables 
+Variables
 
 air temperature = tas / mixed layer depth = mlotst / ocean temperature = thetao / salinity = so / cloud fraction = clt / oxygen = o2
 
+#### Downloading Layers
 
-#### Downloading Layers 
 ```{r}
 # Define layers of interest
 layer_list <- c("tas_baseline_2000_2020_depthsurf",
@@ -64,6 +62,7 @@ file.remove(list.files(outpath, pattern = ".axu.json$", full.names = TRUE))
 env_00 <- terra::rast(list.files(outpath, pattern="mean_00.tif", full.names=TRUE))
 
 ```
+
 Rasters ended up in data/raw/BioOrc_rasters
 
 ```{r}
@@ -81,9 +80,8 @@ terra::plot(env_00)
 describe(env_00[[1]])
 ```
 
+### Download projected environmental data
 
-
-# Future data 
 ```{r}
 # Define layers of interest for future data 
 layer_list_50 <- c("tas_ssp460_2020_2100_depthsurf",
@@ -117,53 +115,27 @@ env_50 <- terra::rast(list.files(outpath, pattern="mean_00.tif", full.names=TRUE
 
 ```
 
+## MARINe Biodiversity
 
-
-
-## MARINe Biodiversity 
 ```{r}
+# Read in biodiversity data 
 biodiv_2025 <- MarineBioClean(cbs_excel_name = 'cbs_data_2025.xlsx', 
                               point_contact_sheet = 'point_contact_summary_layered',
                               quadrat_sheet = 'quadrat_summary_data',
                               swath_sheet = 'swath_summary_data')
 
-
-
-# MAYBE I SHOULD FILTER THE YEARS TO HAVE LESS DATA 
-# 2018-2024? 
-
-# FILTER YEARS HERE 
-
-# Filter years to be from 2018-2024
+# Filter years to be from 2018-2024 for purpose of this test 
 biodiv_filter <- biodiv_2025 |> 
   filter(year >= 2018)
-
-
-
-# COULD DELETE BELOW ----
-# Group by site and species (no year)
-biodiv_total <- biodiv_2025 %>% 
-  group_by(marine_site_name, latitude, longitude, species_lump) %>% # Is the marine site name the issue? 
-  summarise(num_count = sum(total_count))
-
-# Create column to indicate presence/absence
-biodiv_total <- biodiv_total %>% 
-  mutate(presence = ifelse(num_count >= 1, 1, 0))
-
-# Remove rows when presence = 0 
-biodiv_presence <- biodiv_total |> 
-  filter(presence == 1) |> 
-  dplyr::select(c(species_lump, latitude, longitude, presence))
 ```
 
+### Multiple observations within the same point
 
+Since species lump and lat long are already grouped by, this code produces a data frame where the number of observations are expanded out so each row represents a single presence within a point
 
-### Multiple observations within the same point 
+-   Do not group by marine site
+-   Expand out the number of observations so each row is a single observation
 
-Since species lump and lat long are already grouped by, this code produces a data frame where the number of observations are expanded out so each row represents a single presence within a point 
-
-- Do not group by marine site 
-- Expand out the number of observations so each row is a single observation 
 ```{r}
 # NEW STRATEGEY -----
 # only group by species and latitude longitude points
@@ -193,13 +165,9 @@ biodiv_obs_absent <- biodiv_obs |>
 biodiv_obs_01 <- bind_rows(biodiv_obs_present, biodiv_obs_absent) 
 ```
 
+### Select species with northern range edge in Dangermond
 
-
-
-
-### Select species with northern range edge in Dangermond 
-
-**Jania verrucosa**: 
+**Jania verrucosa**:
 
 ```{r}
 # Pick species with Northern Range Edge in Dangermond 
@@ -208,12 +176,9 @@ spp_j_verrucosa <- biodiv_obs_01 |>
 
 ```
 
+How the txt is written:
 
-
-How the txt is written: 
-
-sep = ","
-dec = "."
+sep = "," dec = "."
 
 ```{r}
 # Download this data frame as a CSV ----
@@ -230,27 +195,6 @@ cat("Txt file saved to:", output_file2, "\n")
 
 ```
 
-
-
-```{r}
-ext(env_00)
-# max lat = 43.0500015284681
-# min lat = 31.9500003788806
-# max long = -125.999998474121
-# min long = -115.949998474121
-
-max(spp_j_verrucosa$latitude)
-min(spp_j_verrucosa$latitude)
-max(spp_j_verrucosa$longitude)
-min(spp_j_verrucosa$longitude)
-
-# Might need to remove observations outside of extent, but I will check if the model works without doing this  
-```
-
-
-
-
-## Using the SSDM graphical interface 
+## Using the SSDM graphical interface
 
 Type gui() in the console, select the files from the `model_processed` folder
-
