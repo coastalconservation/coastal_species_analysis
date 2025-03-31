@@ -1,9 +1,15 @@
 ---
 title: "mapping_ranges"
 format: html
+date: last-modified
 ---
 
-## Libraries 
+## Overview
+
+This doc provides the code to make a map of the California coast that outlines the 100 km coastal segments, used to display our range edge analysis
+
+## Libraries
+
 ```{r}
 library(tidyverse)
 library(here)
@@ -12,20 +18,15 @@ library(tmap)
 library(lwgeom) # for st_split
 ```
 
-## Data 
+## Data
 
-California Coastal Commission's Coastal Zone Boundary 
-https://map.dfg.ca.gov/metadata/ds0990.html
+California Coastal Commission's Coastal Zone Boundary https://map.dfg.ca.gov/metadata/ds0990.html
 
-Table with lat long points to break up the state into 100 km chunks 
-Currently in drive folder data_and_methods
+Table with lat long points to break up the state into 100 km chunks Currently in drive folder data_and_methods
 
+2019 TIGER/Line® Shapefiles: Coastline https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2019&layergroup=Coastline
 
-2019 TIGER/Line® Shapefiles: Coastline
-https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2019&layergroup=Coastline
-
-Ca state shapefile 
-https://data.ca.gov/dataset/ca-geographic-boundaries
+Ca state shapefile https://data.ca.gov/dataset/ca-geographic-boundaries
 
 ```{r}
 # Read in lat long division file 
@@ -44,7 +45,6 @@ ca_basemap <- st_read(here('data', 'raw', 'ca_state', 'CA_State.shp'))
 # Dangermond shapefile 
 dangermond <- st_read(here('data', 'raw', 'dangermond_shapefile', 'jldp_boundary.shp'))
 ```
-
 
 ```{r}
 # CA coastal zone boundary 
@@ -66,6 +66,7 @@ ca_mainland <- ca_boundary |>
 ```
 
 
+### Explore data 
 ```{r}
 # Explore the data 
 plot(ca_mainland)
@@ -74,12 +75,9 @@ class(ca_boundary) # sf_dataframe
 st_crs(ca_boundary) #  NAD83 / California Albers 
 ```
 
-Plan for map: Extend the boundaries of the coastal zones buy applying a buffer of 200 km, then clipping it to the original north and south bounds 
+Plan for map: Extend the boundaries of the coastal zones buy applying a buffer of 200 km, then clipping it to the original north and south bounds
 
-
-
-
-
+### Buffer coastline 
 ```{r}
 # Apply 10,000 m  buffer to coastal zones 
 ca_zones_extended <- st_buffer(ca_mainland, dist = 30000)
@@ -123,12 +121,9 @@ tm_shape(ca_zones_crop) +
 ```
 
 
-Next steps: 
+### Reproject 
 
-- Need to reproject to a CRS that using lat long 
-- Figure how to split polygon at lines : look here https://gis.stackexchange.com/questions/489159/using-sf-r-to-split-polygons-based-on-lines
-- Label the chunks with region ID starting with 1 at the most north
-
+Reproject to a CRS that uses lat long 
 
 ```{r}
 # View CRS of data 
@@ -142,9 +137,7 @@ st_crs(ca_zones_crop)
 print(st_bbox(ca_zones_crop))
 ```
 
-
-
-
+### Split polygon at latitude specified lines 
 ```{r}
 # Extract latitude breakpoints and sort from north to south
 latitude_breaks <- sort(ca_breaks$POINT_Y, decreasing = TRUE)
@@ -175,7 +168,7 @@ tm_shape(split_polygons) +
   tm_polygons()
 ```
 
-
+### Label the segments with region ID
 ```{r}
 # Locate center of each polygon 
 centroids <- st_centroid(split_polygons)
@@ -190,7 +183,8 @@ tm_shape(ca_regions_df) +
     tm_polygons("region_id", palette = "viridis") 
 ```
 
-Add base map 
+### Add base map
+
 ```{r}
 
 st_crs(ca_coastline) == st_crs(ca_regions_df)
@@ -201,6 +195,7 @@ ca_basemap <- st_transform(ca_basemap, crs = st_crs(ca_regions_df))
 dangermond <- st_transform(dangermond, crs = st_crs(ca_regions_df))
 ```
 
+### Final map
 
 ```{r}
 # Bounding box to ca 100 regions 
@@ -221,4 +216,3 @@ tm_shape(ca_coastline, bbox = ca_regions_bbox) +
   tm_scale_bar(position = c(0.02, 0.02)) + # scale bar
   tm_compass(position = c(0.01, 0.08), text.size = 0.5) # compass
 ```
-
