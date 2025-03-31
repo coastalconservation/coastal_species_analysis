@@ -1,3 +1,5 @@
+# The purpose of this script is to test out how the function MarineBioClean works 
+
 library(tidyverse)
 library(dplyr)
 
