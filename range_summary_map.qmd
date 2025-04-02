@@ -9,10 +9,15 @@ format: html
 # Load packages 
 library(tidyverse)
 library(here)
-library(readxl)
 library(spData)
 library(sf)
 library(tmap)
+library(readxl)
+```
+
+```{r}
+# Source Scripts
+source(here::here('scripts', 'R', 'MarineBioClean.R'))
 ```
 
 ```{r}
@@ -32,63 +37,12 @@ coastline_segments <- read_csv(here::here("data", "coastal_spatial_data",
 ```
 
 ```{r}
-# Read in three excel files from MARINe biodiversity data 
-point_contact_raw <- read_excel(here('data', 'MARINe_biodiversity_data',
-                                     'cbs_data_CA_2023.xlsx'), sheet = 'point_contact_summary_data')
-quadrat_raw <- read_excel(here('data', 'MARINe_biodiversity_data',
-                               'cbs_data_CA_2023.xlsx'), sheet = 'quadrat_summary_data')
-swath_raw <- read_excel(here('data', 'MARINe_biodiversity_data',
-                             'cbs_data_CA_2023.xlsx'), sheet = 'swath_summary_data')
+biodiv_merge <- MarineBioClean(cbs_excel_name = 'cbs_data_2025.xlsx', 
+                              point_contact_sheet = 'point_contact_summary_layered',
+                              quadrat_sheet = 'quadrat_summary_data',
+                              swath_sheet = 'swath_summary_data')
 ```
 
-
-## Data Cleaning
-
-```{r}
-# Clean point_contact dataset 
-point_contact_clean <- point_contact_raw %>% 
-  # Remove non-matching columns 
-  select(!c('number_of_transect_locations', 'percent_cover')) %>% 
-  # Rename num of hits to total count 
-  rename(total_count = number_of_hits) %>% 
-  # Create new data collection source column 
-  mutate(collection_source = "point contact") %>% 
-  # Filter to mainland only 
-  filter(island == "Mainland") %>% 
-  # Remove certain species lumps 
-  filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
-
-# Clean quadrat dataset 
-quadrat_clean <- quadrat_raw %>% 
-  # Remove non-matching columns 
-  select(!c('number_of_quadrats_sampled', 'total_area_sampled_m2', 'density_per_m2')) %>% 
-  # Create new data collection source column 
-  mutate(collection_source = "quadrat") %>% 
-  # Filter to mainland only 
-  filter(island == "Mainland") %>% 
-  # Remove certain species lumps 
-  filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
-
-# Clean swath dataset 
-swath_clean <- swath_raw %>% 
-  # Remove non-matching columns 
-  select(!c('number_of_transects_sampled', 'est_swath_area_searched_m2',  'density_per_m2')) %>% 
-  # Create new data collection source column 
-  mutate(collection_source = "swath") %>% 
-  # Filter to mainland only 
-  filter(island == "Mainland") %>% 
-  # Remove certain species lumps 
-  filter(!species_lump %in% c("Rock", "Sand", "Tar", "Blue Green Algae", "Red Crust", "Diatom", "Ceramiales"))
-```
-
-#### Merge datasets
-
-Since all three datasets have the same columns, I will merge the datasets into one using the dpylr function `bind_rows`
-
-```{r}
-# Merge the 3 dataset together 
-biodiv_merge <- bind_rows(point_contact_clean, quadrat_clean, swath_clean)
-```
 ```{r}
 # Group by site and species (no year)
 biodiv_total <- biodiv_merge %>% 
@@ -100,7 +54,6 @@ biodiv_total <- biodiv_merge %>%
 
 ## Range function
 
-The problem with only using latitude is that we do not follow the coastline... need to take a look at that.
 ```{r}
 species_range <- function(south_lat, north_lat) {
     biodiv_total %>%
@@ -111,7 +64,8 @@ species_range <- function(south_lat, north_lat) {
             present_above_north = any(latitude > north_lat & presence == 1),
 
             # Observations where Present
-            present_observations_site = sum(latitude >= south_lat & latitude <= north_lat & presence == 1, na.rm = TRUE),
+            present_observations_site = sum(latitude >= south_lat & latitude <= north_lat & presence == 1, 
+                                            na.rm = TRUE),
 
             # Observations Present/Absence
             total_observations = n(),
@@ -191,8 +145,12 @@ for (i in 1:nrow(marine_sites)) {
 
 Write Marine Sites and Range Edges to CSV
 ```{r}
-write.csv(marine_sites, "marine_sites_id.csv", row.names = FALSE)
-write.csv(range_list, "range_list.csv", row.names = FALSE)
+write.csv(marine_sites, here::here("data", 
+                                   "processed",
+                                   "marine_sites_id.csv"), row.names = FALSE)
+write.csv(range_list, here::here("data", 
+                                 "processed",
+                                 "range_list.csv"), row.names = FALSE)
 ```
 
 

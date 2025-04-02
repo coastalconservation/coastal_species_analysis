@@ -17,7 +17,7 @@ library(kableExtra)
 
 ```{r}
 # Load data
-range_edges <- read_csv(here("data", "range_list.csv"))
+range_edges <- read_csv(here("data", "processed", "range_list.csv"))
 ```
 
 ```{r}
@@ -51,6 +51,7 @@ dangermond_range_edges %>%
            general_title = "Note:", 
            footnote_as_chunk = TRUE) 
 ```
+
 ```{r}
 dangermond_range_edges <- range_edges %>%
     filter(id  %in%  c(5,6)) %>% 
