@@ -19,7 +19,7 @@ library(purrr)
 library(shinyFiles) # For ssdm shiny interface
 
 # Load functions 
-source(here::here('scripts', 'R', 'MarineBioClean.R'))
+source(here::here('scripts', 'functions', 'MarineBioClean.R'))
 ```
 
 ## Environmental rasters from BioOracle
