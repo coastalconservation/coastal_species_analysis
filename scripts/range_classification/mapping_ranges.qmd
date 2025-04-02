@@ -48,7 +48,7 @@ dangermond <- st_read(here('data', 'raw', 'dangermond_shapefile', 'jldp_boundary
 
 ```{r}
 # CA coastal zone boundary 
-ca_boundary <- st_read(here('data', 'raw', 'mapping', 'ds990.gdb'))
+ca_boundary <- st_read(here('data', 'raw', 'mapping', 'CA_coastal_zone.gdb'))
 
 # Assign polygon labels 
 ca_boundary <- ca_boundary |>
