@@ -1,0 +1,80 @@
+---
+title: "Range Shift Framework"
+subtitle: "Analyzing historical abundance trends of intertidal species near Point Conception"
+author: "coastalconservation"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+## Load packages
+```{r, message = FALSE}
+#| code-fold: true
+library(here)
+library(ggplot2)
+library(tidyverse)
+library(segmented)
+```
+
+## Read data
+```{r}
+longterm <- read.csv(here("data", "phototranraw_download.csv"))
+```
+
+## Clean data
+```{r}
+# (2002-2024)
+longterm_clean <- longterm %>%
+  filter(state_province == "California" & island == "Mainland") %>%
+  filter(!lumping_code %in% c("ROCK", "SAND", "TAR", "NONCRU")) %>%
+  mutate(year = year(survey_date))
+```
+
+## Filter species of interest
+```{r}
+# Pisaster ochraceus (2002-2023)
+species <- longterm_clean %>%
+  filter(lumping_code == "PISOCH") %>%
+  filter(latitude > 34.03853 & latitude < 35.88387) %>%
+  group_by(year) %>%
+  summarize(avg_pct_cover = mean(percent_cover, na.rm = TRUE))
+```
+
+## Range Shift Framework Analysis
+```{r}
+# Linear model
+lm_model <- lm(avg_pct_cover ~ year, data = species)
+summary(lm_model)
+```
+
+```{r}
+# Segmented model
+seg_model <- segmented(lm_model, seg.Z = ~year) # npsi = 2 (parameter to quanitfy n breaks)
+summary(seg_model)
+```
+
+```{r}
+# Add predicted values from segmented model
+species$predicted <- predict(seg_model)
+```
+
+```{r}
+# Extract estimated breakpoint(s)
+breakpoints <- seg_model$psi[, "Est."]
+breakpoints
+```
+
+```{r}
+#| code-fold: true
+# Plot segmented model
+ggplot(data = species, aes(x = year, y = avg_pct_cover)) +
+  geom_point(color = "darkgrey") +
+  geom_line(aes(y = predicted), color = "blue", linewidth = 1) +
+  geom_vline(xintercept = breakpoints, linetype = "dashed", color = "black", linewidth = 0.5) +
+  scale_x_continuous(expand = c(0, 0.2)) +
+  labs(x = "Year",
+       y = "Average Percent Cover (%)",
+       title = "Segmented Regression Analysis of Pisaster ochraceus",
+       subtitle = "Applying a range shift framework using slopes at optimal break points") +
+  theme_bw()
+```
