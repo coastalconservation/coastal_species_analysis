@@ -1,0 +1,27 @@
+---
+title: "CA_range-classification"
+format: html
+---
+
+this is where were going to explain our script
+
+
+## Objective
+
+## Data 
+
+what, where? 
+
+## Function
+
+who, what, analysis?
+
+## Output
+
+what, where it go?
+
+## Analysis
+
+use function
+
+run species_ranges.R

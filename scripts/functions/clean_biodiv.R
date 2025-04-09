@@ -12,9 +12,9 @@
 #' @export
 #'
 #' @examples
-MarineBioClean <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swath_sheet) {
+clean_biodiv <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swath_sheet) {
   #..........................Create paths..........................
-  input_path <- here::here('data', 'raw', 'cbs_data_2025.xlsx')
+  input_path <- here::here('data', 'raw', 'MARINe_data', 'biodiversity', 'cbs_data_2025.xlsx')
   output_folder <- here::here('data', 'processed')
   output_file <- file.path(output_folder, "clean_biodiv.csv")
   

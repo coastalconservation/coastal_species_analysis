@@ -25,21 +25,16 @@ analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
     library(here)
     
     # Source external R scripts for custom functions
-    source(here::here('scripts', 'R', 'MarineBioClean.R'))
-    source(here::here('scripts', 'range_classification',
-                      'coastline_range_edges', 'species_range_function.R'))
-    
-    # CA coastal zone boundary
-    ca_boundary <- st_read(here('data', 'raw', 'mapping', 'ds990.gdb'))
+    source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+    source(here::here('scripts', 'functions', 'species_ranges.R'))
     
     # Load coastline segments data, rename columns, convert to spatial format, and add segment ID
-    ca_breaks <- read_csv(here('data', 'raw', 'mapping', 'CA_coast_021425.csv')) %>%
-      rename(lat = POINT_Y, long = POINT_X) %>% # Renaming columns for clarity
-      st_as_sf(coords = c("long", "lat"), crs = st_crs(ca_boundary), remove = FALSE) %>% # Convert to sf object with correct CRS
+    ca_breaks <- read_csv(here('data', 'raw', 'spatial_data', 'ca_segments', 'CA_coast_021425.csv')) %>%
+      rename(lat = POINT_Y, long = POINT_X) %>% # Renaming columns for clarity # Convert to sf object with correct CRS
       mutate(segment_id = 1:nrow(.)) # Add unique ID for each coastline segment
     
     # Clean and process biodiversity data using custom function
-    biodiv_merge <- MarineBioClean(cbs_excel_name = cbs_excel_name,
+    biodiv_merge <- clean_biodiv(cbs_excel_name = cbs_excel_name,
                                    point_contact_sheet = point_contact_sheet,
                                    quadrat_sheet = quadrat_sheet,
                                    swath_sheet = swath_sheet)
@@ -67,4 +62,4 @@ analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
     
     # Return the compiled range list
     return(range_list)
-  }
+}
