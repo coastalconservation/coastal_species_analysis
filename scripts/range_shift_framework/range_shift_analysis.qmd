@@ -1,0 +1,30 @@
+---
+title: "Range Shift Analysis"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+## Load packages
+```{r}
+#| code-fold: true
+library(here)
+library(readr)
+library(lubridate)
+library(tidyverse)
+```
+
+## Clean data
+```{r}
+# Source cleaning function
+source(here("scripts", "functions", "clean_longterm.R"))
+
+# Apply cleaning function
+clean_longterm()
+```
+
+## Read data
+```{r}
+longterm <- read_csv(here("data", "processed", "MARINe_data", "longterm", "longterm_processed.csv"))
+```
+
