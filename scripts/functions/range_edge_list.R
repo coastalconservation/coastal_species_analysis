@@ -49,11 +49,37 @@ analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
     coastline_lat <- ca_breaks$lat %>%
       sort(decreasing = FALSE)
     
+    segment_names = c("1" = "Baja",
+                      "2" = "Chula Vista",
+                      "3" = "North County San Diego", 
+                      "4" = "Orange County",
+                      "5" = "Point Mugu",
+                      "6" = "Southern Dangermond",
+                      "7" = "Northern Dangermond",
+                      "8" = "Morro Bay",
+                      "9" = "Big Sur",
+                      "10" = "Monterey Bay",
+                      "11" = "San Francisco",
+                      "12" = "Point Reyes",
+                      "13" = "Bodega Bay",
+                      "14" = "Fort Bragg",
+                      "15" = "Humbolt",
+                      "16" = "Eureka",
+                      "17" = "Crescent City",
+                      "18" = "Pacific North West"
+                      )
+    
     # Loop over coastline segments, calculate species range, and collect results into a list
     range_list <- map_dfr(1:(length(coastline_lat) - 1), function(i) {
+      # 
       species_range(biodiv_total, coastline_lat[i], coastline_lat[i + 1]) %>%
-        mutate(range_lat = paste(round(coastline_lat[i], 2), round(coastline_lat[i + 1], 2), sep = "-"), # Create a range label
-               id = i) # Assign segment ID to each result
+        # Create a range label
+        mutate(range_lat = paste(round(coastline_lat[i], 2), 
+                                 round(coastline_lat[i + 1], 2), sep = "-"), 
+               # Assign segment ID to each result
+               segment_id = i, 
+               # Assign segment name to each result
+               segment_name = segment_names[i]) 
     })
     
     write.csv(range_list, here::here("data",
