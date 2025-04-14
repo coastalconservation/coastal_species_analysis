@@ -82,10 +82,6 @@ analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
                segment_name = segment_names[i]) 
     })
     
-    write.csv(range_list, here::here("data",
-                                     "processed",
-                                     "range_list.csv"), row.names = FALSE)
-    
     # Return the compiled range list
     return(range_list)
 }

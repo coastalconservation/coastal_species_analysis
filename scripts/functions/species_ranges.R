@@ -13,7 +13,7 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
     group_by(species_lump) %>%
     summarize(
       present_below_south = any(latitude < south_lat & presence == TRUE),
-      present_within_buffer = any(latitude >= south_lat & latitude <= north_lat & presence == TRUE),
+      present_within_buffer = any(latitude > south_lat & latitude <= north_lat & presence == TRUE),
       present_above_north = any(latitude > north_lat & presence == TRUE),
       
       # Observations where Present
@@ -24,10 +24,10 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
       total_observations = n(),
       
       # Distinct sites within buffer
-      sites_in_buffer = n_distinct(marine_site_name[latitude >= south_lat & latitude <= north_lat]),
+      sites_in_buffer = n_distinct(marine_site_name[latitude > south_lat & latitude <= north_lat]),
       
       # Distinct sites where species are present within buffer
-      sites_present = n_distinct(marine_site_name[latitude >= south_lat & latitude <= north_lat & presence == 1]),
+      sites_present = n_distinct(marine_site_name[latitude > south_lat & latitude <= north_lat & presence == 1]),
       
       # Total sites
       total_sites = n_distinct(marine_site_name),
@@ -36,7 +36,7 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
       total_counts = sum(num_count, na.rm = TRUE),
       
       # Fraction of years present
-      percent_years_present = n_distinct(year[latitude >= south_lat & latitude <= north_lat & presence == TRUE]) / 
+      percent_years_present = n_distinct(year[latitude > south_lat & latitude <= north_lat & presence == TRUE]) / 
         n_distinct(year) * 100
     ) %>%
     mutate(
