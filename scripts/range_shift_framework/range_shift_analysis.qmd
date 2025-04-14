@@ -14,17 +14,17 @@ library(lubridate)
 library(tidyverse)
 ```
 
+## Read data
+```{r}
+raw_data <- read_csv(here("data", "raw", "MARINe_data", "longterm", "phototranraw_download.csv"))
+```
+
 ## Clean data
 ```{r}
 # Source cleaning function
 source(here("scripts", "functions", "clean_longterm.R"))
 
 # Apply cleaning function
-clean_longterm()
-```
-
-## Read data
-```{r}
-longterm <- read_csv(here("data", "processed", "MARINe_data", "longterm", "longterm_processed.csv"))
+longterm <- clean_longterm(raw_data)
 ```
 
