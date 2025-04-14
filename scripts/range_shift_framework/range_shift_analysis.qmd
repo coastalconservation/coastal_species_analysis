@@ -28,21 +28,3 @@ source(here("scripts", "functions", "clean_longterm.R"))
 longterm <- clean_longterm(raw_data)
 ```
 
-```{r}
-# south
-south <- longterm %>%
-  filter(latitude >= 34.36 & latitude < 34.48)
-
-unique(south$site_code) # 5 sites
-unique(south$lumping_code) # 38 lumping codes
-```
-
-```{r}
-# north
-north <- longterm %>%
-  filter(latitude >= 34.48 & latitude <= 35.25)
-
-unique(north$site_code) # 5 sites
-unique(north$lumping_code) # 38 lumping codes
-```
-
