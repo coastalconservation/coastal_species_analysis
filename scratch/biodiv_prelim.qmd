@@ -1,0 +1,155 @@
+---
+title: "biodiv_prelim"
+format: html
+---
+
+```{r}
+# Source external R scripts for custom functions
+source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+biodiv_df <- clean_biodiv('cbs_data_2025.xlsx',
+                              point_contact_sheet = 'point_contact_summary_layered',
+                              quadrat_sheet = 'quadrat_summary_data',
+                              swath_sheet = 'swath_summary_data')
+```
+
+```{r}
+glimpse(biodiv_df)
+```
+
+
+point_contact_clean 
+```{r}
+point_contact_clean <- biodiv_df %>% filter(collection_source == "point contact")
+quadrat_clean <- biodiv_df %>% filter(collection_source == "quadrat")
+swath_clean <- biodiv_df %>% filter(collection_source == "swath")
+```
+
+```{r}
+dangermond <- biodiv_df %>% 
+  filter(latitude >= 34.36 & latitude <= 35.25) %>% 
+  filter(species_lump %in% dangermond_species_list)
+
+south <- dangermond %>% 
+  filter(latitude < 34.48)
+
+north <- dangermond %>% 
+  filter(latitude > 34.48)
+```
+```{r}
+unique(north$total_count)
+```
+
+```{r}
+pc_dangermond <- point_contact_clean %>% 
+  filter(latitude >= 34.36 & latitude <= 35.25) %>% 
+  filter(species_lump %in% dangermond_species_list)
+
+pc_south <- dangermond %>% 
+  filter(latitude < 34.48)
+
+pc_north <- dangermond %>% 
+  filter(latitude > 34.48)
+```
+
+```{r}
+sum(north$total_count==0) #1187
+sum(north$total_count>0) #107
+
+sum(south$total_count==0) #1609
+sum(south$total_count>0) #70
+
+sum(dangermond$total_count==0) #2796
+sum(dangermond$total_count>0) #177
+```
+
+```{r}
+sum(pc_north$percent_cover==0) #1187
+sum(pc_north$percent_cover>0) #107
+
+sum(pc_south$percent_cover==0) #1609
+sum(pc_south$percent_cover>0) #70
+
+sum(pc_dangermond$percent_cover==0) #2796
+sum(pc_dangermond$percent_cover>0) #177
+```
+
+```{r}
+pc_species <- pc_dangermond %>% 
+  filter(percent_cover>0)
+
+unique(pc_species$species_lump)
+```
+
+
+```{r}
+ggplot(data=dangermond, aes(total_count)) +
+  geom_histogram() +
+  labs(x="Total Counts",
+       y = "Frequency",
+       title = "Histogram of Dangermond Biodiversity Collections") +
+  theme_bw()
+```
+
+```{r}
+ggplot(data=(dangermond %>% filter(total_count>0)), aes(total_count)) +
+  geom_histogram() +
+  labs(x="Total Counts",
+       y = "Frequency",
+       title = "Histogram of Dangermond Biodiversity Collections") +
+  theme_bw()
+```
+
+
+
+```{r}
+dangermond %>% 
+  group_by(species_lump) %>% 
+  summarise(
+    observations = n(),
+    count_sum = sum(total_count)
+  ) %>% 
+  View()
+```
+
+```{r}
+dangermond %>% 
+  filter(collection_source=="quadrat") %>% 
+  group_by(species_lump) %>% 
+  summarise(count_sum = sum(total_count)) %>% 
+  arrange(desc(count_sum))
+```
+
+```{r}
+tegula <- dangermond %>% 
+  filter(species_lump == "Tegula brunnea") %>% 
+  mutate(danger = case_when(latitude < 34.48 ~ "south",
+                            latitude > 34.48 ~ "north"))
+```
+
+```{r}
+ggplot(tegula, aes(x=year, y=total_count, color = marine_site_name)) +
+  geom_line() +
+  labs(x="Total Counts",
+       y = "Frequency",
+       title = "Histogram of Dangermond Biodiversity Collections") +
+  theme_bw() 
+```
+
+```{r}
+ggplot(tegula, aes(x=year, y=total_count, group = marine_site_name, color = danger)) +
+  geom_line() +
+  labs(x="Total Counts",
+       y = "Frequency",
+       title = "Histogram of Dangermond Biodiversity Collections") +
+  theme_bw() 
+```
+

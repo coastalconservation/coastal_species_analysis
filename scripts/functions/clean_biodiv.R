@@ -27,9 +27,9 @@ clean_biodiv <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swa
   # Clean point_contact dataset 
   point_contact_clean <- point_contact_raw %>% 
     # Remove non-matching columns 
-    dplyr::select(-c('number_of_transect_locations', 'percent_cover')) %>% 
+    # dplyr::select(-c('number_of_transect_locations', 'percent_cover')) %>% 
     # Rename num of hits to total count 
-    dplyr::rename(total_count = number_of_hits) %>% 
+    #dplyr::rename(total_count = number_of_hits) %>% 
     # Create new data collection source column 
     dplyr::mutate(collection_source = "point contact") %>% 
     # Filter to mainland only 
@@ -40,7 +40,7 @@ clean_biodiv <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swa
   # Clean quadrat dataset 
   quadrat_clean <- quadrat_raw %>% 
     # Remove non-matching columns 
-    dplyr::select(-c('number_of_quadrats_sampled', 'total_area_sampled_m2', 'density_per_m2')) %>% 
+    #dplyr::select(-c('number_of_quadrats_sampled', 'total_area_sampled_m2', 'density_per_m2')) %>% 
     # Create new data collection source column 
     dplyr::mutate(collection_source = "quadrat") %>% 
     # Filter to mainland only 
@@ -51,7 +51,7 @@ clean_biodiv <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swa
   # Clean swath dataset 
   swath_clean <- swath_raw %>% 
     # Remove non-matching columns 
-    dplyr::select(-c('number_of_transects_sampled', 'est_swath_area_searched_m2',  'density_per_m2')) %>% 
+    #dplyr::select(-c('number_of_transects_sampled', 'est_swath_area_searched_m2',  'density_per_m2')) %>% 
     # Create new data collection source column 
     dplyr::mutate(collection_source = "swath") %>% 
     # Filter to mainland only 
@@ -61,6 +61,7 @@ clean_biodiv <- function(cbs_excel_name, point_contact_sheet, quadrat_sheet, swa
   
   #....................Merge datasets together.....................
   clean_biodiv <- dplyr::bind_rows(point_contact_clean, quadrat_clean, swath_clean)
+  #clean_biodiv <- dplyr::bind_rows(quadrat_clean, swath_clean)
   
   # Return merged dataframe 
   return(clean_biodiv)
