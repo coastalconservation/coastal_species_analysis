@@ -19,26 +19,10 @@ library(here)
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
 ```
 
-### Read in data
+# Read in Data
 
-One way to read in data, not compatible with modelling
+### Read in biodiv data
 
-```{r}
-# Define path to your rasters using here()
-raster_path <- here("data", "raw", "BioOrc_rasters")
-# Read and stack rasters
-env_00 <- terra::rast(list.files(raster_path, pattern = "mean_00.tif$", full.names = TRUE))
-# Optional: Check names
-names(env_00)
-```
-```{r}
-# Define path to your rasters using here()
-raster_path <- here("data", "raw", "BioOrc_rasters")
-# Read and stack rasters
-env_50 <- terra::rast(list.files(raster_path, pattern = "mean_50.tif$", full.names = TRUE))
-# Optional: Check names
-names(env_50)
-```
 ```{r}
 # Read in biodiversity data 
 biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
@@ -47,12 +31,12 @@ biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx',
                               swath_sheet = 'swath_summary_data')
 ```
 
-### Read in data using load_var
+### Read in raster data using load_var
 
 This worked!
 
-
 ##### Loading in for 00
+
 ```{r}
 env_00_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_00"), files = NULL, format = ".tif")
 ```
@@ -62,10 +46,25 @@ env_00_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_00"), 
 ```{r}
 env_50_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_50"), files = NULL, format = ".tif")
 ```
+##### Renaming variables in rasters
+
+```{r}
+# Creating new names for raster, to ensure both raster stacks match in names
+new_names <- c("clt__depthsurf_mean", "mlotst_depthsurf_mean", "o2depthmax_mean0", "so_depthsurf_mean", "tas_depthsurf_mean", "thetao_depthsurf_mean")
+```
+
+```{r}
+# applying the names
+names(env_00_load) <- new_names
+names(env_50_load) <- new_names
+```
+
+
 
 ### Modeling with Alaria marginata
 
-##### Formatting data 
+##### Formatting data
+
 ```{r}
 # Filter to alaria
 alaria_data <- biodiv_2025 %>% 
@@ -80,14 +79,12 @@ alaria_obs <- alaria_data |>
   ungroup()
 ```
 
-
 ```{r}
 # Expand rows & keep observation column
 alaria_obs_present <- alaria_obs |>
   filter(num_count >=1 ) |>
   uncount(num_count) 
 ```
-
 
 ### Running SDMs, GLM AND GAM
 
@@ -97,27 +94,31 @@ For individual species model with one model type
 # GLM
 SDM_glm <- modelling('GLM', subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'), 
                  env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
-plot(SDM@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
+plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
 ```
 
 ```{r}
 # GAM model
 SDM_gam <- modelling('GAM', subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'), 
                  env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
-plot(SDM@projection, main = 'SDM\nfor Alaria marginata\nwith GAM algorithm')
+plot(SDM_gam@projection, main = 'SDM\nfor Alaria marginata\nwith GAM algorithm')
 ```
-## Ensemble Species Model 
+
+## Ensemble Species Model
 
 ```{r}
-ESDM <- ensemble_modelling(c('GAM', 'GLM'), subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'),
+ESDM <- ensemble_modelling(c('GAM', 'GLM','MARS', 'CTA','GBM', 'MAXENT', 'ANN', 'RF', 'SVM'), subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'),
                            env_00_load, rep = 1, Xcol = 'longitude', Ycol = 'latitude',
                           ensemble.thresh = 0, verbose = FALSE)
 plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
 ```
+
 ##### Model accuracy assesment
+
 ```{r}
 knitr::kable(ESDM@evaluation)
 ```
+
 ```{r}
 knitr::kable(ESDM@variable.importance)
 ```
@@ -132,5 +133,9 @@ Trying to use the `project()` with projected env data.
 
 ```{r}
 SDM_projection <- SSDM::project(ESDM, env_50_load, output.format = "model")
+```
+
+```{r}
+plot(SDM_projection)
 ```
 
