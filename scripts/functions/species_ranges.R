@@ -27,7 +27,7 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
       sites_in_buffer = n_distinct(marine_site_name[latitude > south_lat & latitude <= north_lat]),
       
       # Distinct counts within buffer
-      counts_in_buffer = sum(total_count[latitude > south_lat & latitude <= north_lat]),
+      counts_in_buffer = sum(num_count[latitude > south_lat & latitude <= north_lat]),
       
       # Distinct sites where species are present within buffer
       sites_present = n_distinct(marine_site_name[latitude > south_lat & latitude <= north_lat & presence == 1]),

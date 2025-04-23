@@ -6,7 +6,6 @@ format: html
 ```{r}
 # Source external R scripts for custom functions
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
-
 ```
 
 ```{r}
@@ -20,6 +19,23 @@ biodiv_df <- clean_biodiv('cbs_data_2025.xlsx',
                               quadrat_sheet = 'quadrat_summary_data',
                               swath_sheet = 'swath_summary_data')
 ```
+
+```{r}
+# Load data
+range_edges <- read_csv(here("data", "processed", "range_list.csv"))
+
+# Pull species with range edges in Dangermond
+dangermond_range_edges <- range_edges %>%
+  filter(segment_id  %in%  c(6,7),
+         range_edge_category  %in% c("Northern Range Edge")
+  )
+```
+
+
+```{r}
+dangermond_species_list <- unique(dangermond_range_edges$species_lump)
+```
+
 
 ```{r}
 glimpse(biodiv_df)
@@ -44,6 +60,7 @@ south <- dangermond %>%
 north <- dangermond %>% 
   filter(latitude > 34.48)
 ```
+
 ```{r}
 unique(north$total_count)
 ```
@@ -128,28 +145,35 @@ dangermond %>%
   arrange(desc(count_sum))
 ```
 
+## Max Latitude Over time
+### Dwarf Triton
+
+Selection of one northern range edge species
+
 ```{r}
-tegula <- dangermond %>% 
-  filter(species_lump == "Tegula brunnea") %>% 
-  mutate(danger = case_when(latitude < 34.48 ~ "south",
-                            latitude > 34.48 ~ "north"))
+dwarf_triton_expansion <- biodiv_df %>% 
+  filter(species_lump == "Roperia poulsoni") %>% 
+  filter(total_count > 0) %>% 
+  group_by(year) %>% 
+  summarise(
+    max_lat = max(latitude),
+    min_lat = min(latitude)
+  )
 ```
 
 ```{r}
-ggplot(tegula, aes(x=year, y=total_count, color = marine_site_name)) +
-  geom_line() +
-  labs(x="Total Counts",
-       y = "Frequency",
-       title = "Histogram of Dangermond Biodiversity Collections") +
-  theme_bw() 
+ggplot(dwarf_triton_expansion) +
+  geom_point(aes(x=year, y=max_lat, col = "max_lat"), alpha = .75)
+```
+```{r}
+ggplot(dwarf_triton_expansion) +
+  geom_point(aes(x=year, y=min_lat, col = "min_lat"), alpha = .75)
 ```
 
 ```{r}
-ggplot(tegula, aes(x=year, y=total_count, group = marine_site_name, color = danger)) +
-  geom_line() +
-  labs(x="Total Counts",
-       y = "Frequency",
-       title = "Histogram of Dangermond Biodiversity Collections") +
-  theme_bw() 
+ggplot(dwarf_triton_expansion) +
+  geom_point(aes(x=year, y=max_lat, col = "max_lat"), alpha = .75) +
+  geom_point(aes(x=year, y=min_lat, col="min_lat"), alpha = .75) +
+  ylim(26, 35)
 ```
 
