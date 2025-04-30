@@ -37,11 +37,12 @@ This repository contains all scripts used for identifying intertidal species ran
 
 ```
 coastal_species_analysis 
-|
+├── plots/
+│   	│	├── figures
 |
 ├── scripts/   # Analysis and modeling scripts
-│	│
-│	├── R
+│	
+│	├── R/
 │   	│	├──  dangermond_range_edges.R
 │   	│	├──  marine_sites.R
 │	│
