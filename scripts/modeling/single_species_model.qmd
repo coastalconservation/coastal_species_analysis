@@ -38,28 +38,16 @@ This worked!
 ##### Loading in for 00
 
 ```{r}
-env_00_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_00"), files = NULL, format = ".tif")
+env_00_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "historical"), files = NULL, format = ".tif")
 ```
 
 ##### Loading in for 50
 
 ```{r}
-env_50_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_50"), files = NULL, format = ".tif")
-```
-##### Renaming variables in rasters
-
-```{r}
-# Creating new names for raster, to ensure both raster stacks match in names
-new_names <- c("clt__depthsurf_mean", "mlotst_depthsurf_mean", "o2depthmax_mean0", "so_depthsurf_mean", "tas_depthsurf_mean", "thetao_depthsurf_mean")
+env_50_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "projected_ssp460"), files = NULL, format = ".tif")
 ```
 
-```{r}
-# applying the names
-names(env_00_load) <- new_names
-names(env_50_load) <- new_names
-```
-
-
+# \##### Renaming variables in rasters
 
 ### Modeling with Alaria marginata
 
@@ -139,3 +127,6 @@ SDM_projection <- SSDM::project(ESDM, env_50_load, output.format = "model")
 plot(SDM_projection)
 ```
 
+```{r}
+model_single_species('Tegula aureotincta')
+```
