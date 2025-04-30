@@ -19,6 +19,11 @@ library(sf)
 
 # Load functions 
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+source(here::here('scripts', 'functions', 'model_sing_species.R'))
+```
+
+```{r}
+model_sing_species('Littorina plena/scutulata')
 ```
 
 
@@ -123,10 +128,10 @@ SDM_glm <- modelling('GLM', subset(alaria_obs_present, alaria_obs_present$specie
 plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
 ```
 ```{r}
-ESDM <- ensemble_modelling(c('GAM', 'GLM','MARS', 'CTA','GBM', 'MAXENT', 'ANN', 'RF', 'SVM'), subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'),
-                           env_00_load, rep = 1, Xcol = 'longitude', Ycol = 'latitude',
-                          ensemble.thresh = 0, verbose = FALSE)
-plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+#ESDM <- ensemble_modelling(c('GAM', 'GLM','MARS', 'CTA','GBM', 'MAXENT', 'ANN', 'RF', 'SVM'), subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'),
+                           #env_00_load, rep = 1, Xcol = 'longitude', Ycol = 'latitude',
+                          #ensemble.thresh = 0, verbose = FALSE)
+#plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
 ```
 
 ## Function for modeling a single species
@@ -154,7 +159,7 @@ plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 ```
 
 ```{r}
-single_species_model('Alaria marginata')
+single_species_model('Littorina plena/scutulata')
 ```
 
 
