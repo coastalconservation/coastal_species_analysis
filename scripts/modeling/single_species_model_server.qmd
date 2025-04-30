@@ -22,10 +22,6 @@ source(here::here('scripts', 'functions', 'clean_biodiv.R'))
 source(here::here('scripts', 'functions', 'model_sing_species.R'))
 ```
 
-```{r}
-model_sing_species('Littorina plena/scutulata')
-```
-
 
 # Read in Data
 
@@ -109,11 +105,18 @@ alaria_obs <- alaria_data |>
   summarise(num_count = sum(total_count)) |>
   ungroup()
 ```
+```{r}
+alaria_obs_pa <- alaria_obs %>%
+  mutate(status = if_else(num_count >= 1,
+                          "presence",
+                          "absent"))
+```
+
 
 ```{r}
 # Expand rows & keep observation column
 alaria_obs_present <- alaria_obs |>
-  filter(num_count >=1 ) |>
+  mutate(num_count >=1 ) |>
   uncount(num_count) 
 ```
 
@@ -157,6 +160,19 @@ SDM_glm <- modelling('GLM', subset(species_obs_present, species_obs_present$spec
 plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 }
 ```
+
+Additionally, data sampling uncertainties (presences, pseudo-absences) may be addressed by running several replicates for each algorithm (rep argument).
+
+The package also provides an uncertainty map representing the between-algorithms variance. The degree of agreement between each pair of algorithms can be assessed through a correlation matrix giving the Pearson’s coefficient.
+
+ESDM <- ensemble_modelling(c('CTA', 'MARS'), subset(Occurrences, Occurrences$SPECIES == 'elliptica'),
+                           Env, rep = 1, Xcol = 'LONGITUDE', Ycol = 'LATITUDE',
+                          ensemble.thresh = 0, verbose = FALSE)
+plot(ESDM@projection, main = 'ESDM\nfor Cryptocarya elliptica\nwith CTA and MARS algorithms')
+
+https://cran.r-project.org/web/packages/SSDM/vignettes/SSDM.html#Summary_plot
+
+For each species, the package can store two results in raster format: (1) a continuous raster map giving the habitat suitability for presence-only data, and the probability of presence for presence/absence data; and (2) a binary presence/absence raster based on the threshold of habitat suitability that maximises a user-specified accuracy metric (see below).
 
 ```{r}
 single_species_model('Littorina plena/scutulata')

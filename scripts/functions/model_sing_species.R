@@ -77,8 +77,6 @@ model_sing_species <- function(species){
                              env_00_load, rep = 1, Xcol = 'longitude', Ycol = 'latitude',
                              ensemble.thresh = 0, verbose = FALSE)
   plot(ESDM@projection, main = 'ESDM\nfor Species\nwith GAM and GLM algorithms')
- 
-   # Plot just the model
-  plot(ESDM)
+
 }
 
