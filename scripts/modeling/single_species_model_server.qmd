@@ -5,15 +5,6 @@ editor: visual
 ---
 
 ```{r}
-file_names <- list.files("/capstone/seamissions/data/meds_capstone_project", pattern="*.csv", full.names=TRUE)
-```
-
----
-title: "single_species_model"
-format: html
----
-
-```{r}
 # Load packages
 library(tidyverse)
 library(dplyr)
@@ -24,14 +15,67 @@ library(terra)
 library(purrr)
 library(shinyFiles) # For ssdm shiny interface
 library(here)
+library(sf)
 
 # Load functions 
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
 ```
 
+
 # Read in Data
 
-### Read in biodiv data
+### Read in biodiv data 
+
+### Read in rasters manually
+
+```{r}
+# Manually read in the rasters
+thetao_mean_50  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/thetao_mean_50.tif")
+tas_mean_50     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/tas_mean_50.tif")
+so_mean_50      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/so_mean_50.tif")
+o2_mean_50      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/o2_mean_50.tif")
+mlotst_mean_50  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/mlotst_mean_50.tif")
+clt_mean_50     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/clt_mean_50.tif")
+
+# Combine into one multi-layer object
+env_50_load <- c(thetao_mean_50,
+                  tas_mean_50,
+                  so_mean_50,
+                  o2_mean_50,
+                  mlotst_mean_50,
+                  clt_mean_50)
+```
+
+```{r}
+env_50_load <- stack(env_50_load)
+```
+
+```{r}
+# Manually read in the historical rasters
+thetao_mean_00  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/thetao_mean_00.tif")
+tas_mean_00     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/tas_mean_00.tif")
+so_mean_00      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/so_mean_00.tif")
+o2_mean_00      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/o2_mean_00.tif")
+mlotst_mean_00  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/mlotst_mean_00.tif")
+clt_mean_00     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/clt_mean_00.tif")
+
+# Combine into a single multi‐layer SpatRaster
+env_00_load <- c(
+  thetao_mean_00,
+  tas_mean_00,
+  so_mean_00,
+  o2_mean_00,
+  mlotst_mean_00,
+  clt_mean_00
+)
+
+env_00_load <- stack(env_00_load)
+```
+
+
+### Clean workflow for one species
+
+There is an issue doing this online because the clean_biodive function hard calls in the file
 
 ```{r}
 # Read in biodiversity data 
@@ -41,14 +85,16 @@ biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx',
                               swath_sheet = 'swath_summary_data')
 ```
 
+
 ### Read in raster data using load_var
 
 This worked!
 
 ##### Loading in for 00
 
+
 ```{r}
-env_00_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_00"), files = NULL, format = ".tif")
+env_00_load <- load_var(path = file_names, files = NULL, format = ".tif")
 ```
 
 ##### Loading in for 50
@@ -62,6 +108,11 @@ env_50_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_50"), 
 # Creating new names for raster, to ensure both raster stacks match in names
 new_names <- c("clt__depthsurf_mean", "mlotst_depthsurf_mean", "o2depthmax_mean0", "so_depthsurf_mean", "tas_depthsurf_mean", "thetao_depthsurf_mean")
 ```
+
+```{r}
+print(env_00_load)
+```
+
 
 ```{r}
 # applying the names
@@ -106,3 +157,25 @@ SDM_glm <- modelling('GLM', subset(alaria_obs_present, alaria_obs_present$specie
                  env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
 plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
 ```
+
+## Function for modeling a single species
+
+```{r}
+single_species_model <- function(species){
+  
+  species_data <- biodiv_2025 %>% 
+  filter(species_lump == species)
+  
+  species_obs <- species_data |>
+  group_by(species_lump, latitude, longitude) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+  
+  species_obs_present <- species_obs |>
+  filter(num_count >=1 ) |>
+  uncount(num_count)
+}
+```
+
+
+

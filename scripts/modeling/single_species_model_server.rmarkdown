@@ -1,0 +1,125 @@
+---
+title: "loading data from server"
+format: html
+editor: visual
+---
+
+```{r}
+file_names <- list.files("/capstone/coastalconservation/data/raw/MARINe_data", pattern=".xlsx", full.names=TRUE)
+
+```
+
+---
+title: "single_species_model"
+format: html
+---
+
+```{r}
+# Load packages
+library(tidyverse)
+library(dplyr)
+library(SSDM)
+library(biooracler)
+library(raster)
+library(terra)
+library(purrr)
+library(shinyFiles) # For ssdm shiny interface
+library(here)
+
+# Load functions 
+source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+```
+
+
+
+# Read in Data
+
+### Read in biodiv data
+
+There is an issue doing this online because the clean_biodive function hard calls in the file
+
+
+```{r}
+# Read in biodiversity data 
+biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
+                              point_contact_sheet = 'point_contact_summary_layered',
+                              quadrat_sheet = 'quadrat_summary_data',
+                              swath_sheet = 'swath_summary_data')
+```
+
+sftp://workbench-1.bren.ucsb.edu/capstone/coastalconservation/data/raw/MARINe_data/biodiversity%20/cbs_data_2025.xlsx
+### Read in raster data using load_var
+
+This worked!
+
+##### Loading in for 00
+
+
+```{r}
+env_00_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_00"), files = NULL, format = ".tif")
+```
+
+
+##### Loading in for 50
+
+
+```{r}
+env_50_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_50"), files = NULL, format = ".tif")
+```
+
+##### Renaming variables in rasters
+
+
+```{r}
+# Creating new names for raster, to ensure both raster stacks match in names
+new_names <- c("clt__depthsurf_mean", "mlotst_depthsurf_mean", "o2depthmax_mean0", "so_depthsurf_mean", "tas_depthsurf_mean", "thetao_depthsurf_mean")
+```
+
+```{r}
+# applying the names
+names(env_00_load) <- new_names
+names(env_50_load) <- new_names
+```
+
+
+
+
+### Modeling with Alaria marginata
+
+##### Formatting data
+
+
+```{r}
+# Filter to alaria
+alaria_data <- biodiv_2025 %>% 
+  filter(species_lump == "Alaria marginata")
+```
+
+```{r}
+# Formatting observation data
+alaria_obs <- alaria_data |>
+  group_by(species_lump, latitude, longitude) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+```
+
+```{r}
+# Expand rows & keep observation column
+alaria_obs_present <- alaria_obs |>
+  filter(num_count >=1 ) |>
+  uncount(num_count) 
+```
+
+
+### Running SDMs, GLM AND GAM
+
+For individual species model with one model type
+
+
+```{r}
+# GLM
+SDM_glm <- modelling('GLM', subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'), 
+                 env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
+plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
+```
+
