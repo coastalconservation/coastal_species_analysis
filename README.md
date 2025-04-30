@@ -29,12 +29,9 @@ This repository contains all scripts used for identifying intertidal species ran
 
 ## Folder Descriptions 
 
-
-## Repository Structure
-
-
 ## Data 
 
+## Repository Structure
 ```
 coastal_species_analysis 
 ├── plots/
