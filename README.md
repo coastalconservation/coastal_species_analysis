@@ -42,16 +42,20 @@ coastal_species_analysis
 ├── scripts/   # Analysis and modeling scripts
 │	│
 │	├── range_classifcation/      # Scripts for species list & map creation
-│   	│	├──  
+│   	│	├──  CA_range-classification.qmd
 │   	│	├──  
 │	│
 │	├── range_shift_framework/   # Scripts for range shift framework
-│   	│	├── 
+│   	│	├── range_shift_analysis.qmd
+│   	│	├── range_shift_classification.qmd
 │	│
 │	├── modeling/             # Scripts for species distribution modeling
-│   	│	├──  
-│   	│	├──  
-│   	│	├──    
+│   	│	├──  ssdm_modeling_test_files
+│   	│	├──  download-BioORACLE.R
+│   	│	├──  single_species_model_server.qmd
+│   	│	├──  single_species_model_server.rmarkdown
+│   	│	├──  ssdm_modeling_test.html
+│   	│	├──  ssdm_modeling_test.qmd
 │	│
 │	├── functions/     # Functions
 │   	│	├── clean_biodiv.R  # Reads in and cleans the biodiv data      
