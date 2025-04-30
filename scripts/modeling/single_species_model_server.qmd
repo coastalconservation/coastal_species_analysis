@@ -47,6 +47,7 @@ env_50_load <- c(thetao_mean_50,
 ```
 
 ```{r}
+# Change to env_ssp460 
 env_50_load <- stack(env_50_load)
 ```
 
@@ -86,42 +87,6 @@ biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx',
 ```
 
 
-### Read in raster data using load_var
-
-This worked!
-
-##### Loading in for 00
-
-
-```{r}
-env_00_load <- load_var(path = file_names, files = NULL, format = ".tif")
-```
-
-##### Loading in for 50
-
-```{r}
-env_50_load <- load_var(path = here("data", "raw", "BioOrc_rasters", "env_50"), files = NULL, format = ".tif")
-```
-##### Renaming variables in rasters
-
-```{r}
-# Creating new names for raster, to ensure both raster stacks match in names
-new_names <- c("clt__depthsurf_mean", "mlotst_depthsurf_mean", "o2depthmax_mean0", "so_depthsurf_mean", "tas_depthsurf_mean", "thetao_depthsurf_mean")
-```
-
-```{r}
-print(env_00_load)
-```
-
-
-```{r}
-# applying the names
-names(env_00_load) <- new_names
-names(env_50_load) <- new_names
-```
-
-
-
 ### Modeling with Alaria marginata
 
 ##### Formatting data
@@ -157,6 +122,12 @@ SDM_glm <- modelling('GLM', subset(alaria_obs_present, alaria_obs_present$specie
                  env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
 plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
 ```
+```{r}
+ESDM <- ensemble_modelling(c('GAM', 'GLM','MARS', 'CTA','GBM', 'MAXENT', 'ANN', 'RF', 'SVM'), subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'),
+                           env_00_load, rep = 1, Xcol = 'longitude', Ycol = 'latitude',
+                          ensemble.thresh = 0, verbose = FALSE)
+plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+```
 
 ## Function for modeling a single species
 
@@ -174,7 +145,16 @@ single_species_model <- function(species){
   species_obs_present <- species_obs |>
   filter(num_count >=1 ) |>
   uncount(num_count)
+  
+
+SDM_glm <- modelling('GLM', subset(species_obs_present, species_obs_present$species_lump == species), 
+                 env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
+plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 }
+```
+
+```{r}
+single_species_model('Alaria marginata')
 ```
 
 
