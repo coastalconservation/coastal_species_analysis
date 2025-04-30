@@ -8,7 +8,7 @@
 #' @param north_late The absolute northern most latitude of the buffer
 #'
 #' @returns Single dataframe at that buffer with range edge descriptions and summary statistics for each species
-species_range <- function(cbs_clean, south_lat, north_lat) {
+buffer_classification <- function(cbs_clean, south_lat, north_lat) {
   csb_range_edge <- cbs_clean %>%
     group_by(species_lump) %>%
     summarize(
@@ -25,6 +25,9 @@ species_range <- function(cbs_clean, south_lat, north_lat) {
       
       # Distinct sites within buffer
       sites_in_buffer = n_distinct(marine_site_name[latitude > south_lat & latitude <= north_lat]),
+      
+      # Distinct counts within buffer
+      counts_in_buffer = sum(num_count[latitude > south_lat & latitude <= north_lat]),
       
       # Distinct sites where species are present within buffer
       sites_present = n_distinct(marine_site_name[latitude > south_lat & latitude <= north_lat & presence == 1]),
