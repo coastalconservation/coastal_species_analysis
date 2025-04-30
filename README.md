@@ -41,6 +41,10 @@ coastal_species_analysis
 |
 ├── scripts/   # Analysis and modeling scripts
 │	│
+│	├── R
+│   	│	├──  dangermond_range_edges.R
+│   	│	├──  marine_sites.R
+│	│
 │	├── range_classifcation/      # Scripts for species list & map creation
 │   	│	├──  CA_range-classification.qmd
 │   	│	├──  
