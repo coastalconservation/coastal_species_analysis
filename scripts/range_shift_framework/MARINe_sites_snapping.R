@@ -26,7 +26,7 @@ sites <- read_csv('/capstone/coastalconservation/data/raw/MARINe_data/sites/mari
 # Read in CA coastline 
 coastline <- read_sf('/capstone/coastalconservation/data/raw/spatial_data/CA_coastline_polyline/coast.line.CA.shp')
 
-# ADD COMMENT FOR PUSH 
+# SECOND COMMENT FOR TEST 
 
 # Prep data -------------------------------------------------------------------
 # CA COASTLINE 
