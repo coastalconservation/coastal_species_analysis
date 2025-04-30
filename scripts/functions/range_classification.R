@@ -10,12 +10,12 @@
 #' @return A data frame (`range_list`) of species range analysis results per coastline segment, saved to "data/processed/range_list.csv".
 #'
 #' @details Reads biodiversity data, divides the California coastline into segments,
-#' and uses `species_range` (from 'species_range_function.R') to analyze species
+#' and uses `buffer_classification` (from 'buffer_classification.R') to analyze species
 #' presence within each segment. Relies on cleaned biodiversity data from
-#' `MarineBioClean.R`
+#' `clean_biodiv.R`
 
 
-analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
+range_classification <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
                                      point_contact_sheet = 'point_contact_summary_layered',
                                      quadrat_sheet = 'quadrat_summary_data',
                                      swath_sheet = 'swath_summary_data') {
@@ -26,7 +26,7 @@ analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
     
     # Source external R scripts for custom functions
     source(here::here('scripts', 'functions', 'clean_biodiv.R'))
-    source(here::here('scripts', 'functions', 'species_ranges.R'))
+    source(here::here('scripts', 'functions', 'buffer_classification.R'))
     
     # Load coastline segments data, rename columns, convert to spatial format, and add segment ID
     ca_breaks <- read_csv(here('data', 'raw', 'spatial_data', 'ca_segments', 'CA_coast_021425.csv')) %>%
@@ -72,7 +72,7 @@ analyze_coastline_ranges <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
     # Loop over coastline segments, calculate species range, and collect results into a list
     range_list <- map_dfr(1:(length(coastline_lat) - 1), function(i) {
       # 
-      species_range(biodiv_total, coastline_lat[i], coastline_lat[i + 1]) %>%
+      buffer_classification(biodiv_total, coastline_lat[i], coastline_lat[i + 1]) %>%
         # Create a range label
         mutate(range_lat = paste(round(coastline_lat[i], 2), 
                                  round(coastline_lat[i + 1], 2), sep = "-"), 

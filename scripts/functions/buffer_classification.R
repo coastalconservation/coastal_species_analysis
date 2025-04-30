@@ -8,7 +8,7 @@
 #' @param north_late The absolute northern most latitude of the buffer
 #'
 #' @returns Single dataframe at that buffer with range edge descriptions and summary statistics for each species
-species_range <- function(cbs_clean, south_lat, north_lat) {
+buffer_classification <- function(cbs_clean, south_lat, north_lat) {
   csb_range_edge <- cbs_clean %>%
     group_by(species_lump) %>%
     summarize(

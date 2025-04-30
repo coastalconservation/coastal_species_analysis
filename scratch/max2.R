@@ -55,16 +55,17 @@ agaei_pred <- expand_grid(latitude = seq(25, 40, length.out=1000),
     cum_den_norm = predict(agaei_logit, newdata = ., type="response")
   ) 
 
+ggplot(agaei, aes(x=latitude, y=cum_den_norm, color=year)) +
+  geom_point() +
+  geom_line(aes(group = year), data=agaei_pred) +
+  xlim(25, 40)
+
+## Northern Extend
 northern_extend <- agaei_pred %>% 
   group_by(year) %>% 
   summarise(
     max_lat = approx(cum_den_norm, latitude, xout=0.95)$y
   )
-
-ggplot(agaei, aes(x=latitude, y=cum_den_norm, color=year)) +
-  geom_point() +
-  geom_line(aes(group = year), data=agaei_pred) +
-  xlim(25, 40)
 
 ggplot(northern_extend, aes(year, max_lat)) +
   geom_point()
