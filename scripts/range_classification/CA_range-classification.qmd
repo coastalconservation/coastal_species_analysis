@@ -16,6 +16,14 @@ what, where?
 
 who, what, analysis?
 
+```{r}
+source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+source(here::here('scripts', 'functions', 'buffer_classification.R'))
+source(here::here('scripts', 'functions', 'range_classification.R'))
+```
+
+
+
 ## Output
 
 what, where it go?
@@ -25,3 +33,10 @@ what, where it go?
 use function
 
 run species_ranges.R
+
+
+```{r}
+write_csv(clean_biodiv(), here("data","processed", "MARINe_full.csv"))
+write_csv(range_classification(), here("data","processed", "range_classification_list.csv"))
+```
+
