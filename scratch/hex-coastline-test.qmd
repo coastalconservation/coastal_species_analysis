@@ -1,0 +1,144 @@
+---
+title: "Mapping Range Edges of Intertidal species along CA coast"
+author: "Jordan"
+format: html
+editor_options: 
+  chunk_output_type: console
+---
+
+## Libraries
+```{r}
+library(tidyverse)
+library(tmap)
+library(sf)
+
+```
+
+
+
+## Data 
+
+```{r}
+# Data folder path
+path <- "/capstone/coastalconservation/data"
+
+# ------Spatial data -------------
+# California state basemap 
+ca_basemap <- st_read(file.path(path, "raw/spatial_data/ca_state/CA_State.shp"))
+
+# California coastline 
+ca_coastline <- st_read(file.path(path, "raw/spatial_data/tl_2019_us_coastline/tl_2019_us_coastline.shp"))
+
+
+# ------Range edges data --------
+range_edge <- read_csv(file.path(path, "processed/range_list.csv"))
+```
+
+## CRS 
+```{r}
+# Reproject to California Albers, EPSG:3310
+ca_coastline_proj <- st_transform(ca_coastline, crs = 3310)
+ca_basemap_proj <- st_transform(ca_basemap, crs = 3310)
+
+
+# Ensure match 
+st_crs(ca_coastline_proj) == st_crs(ca_basemap_proj)
+```
+
+
+## CA basemap 
+```{r}
+# CA bounding box to crop coastline 
+CA_bbox <- st_bbox(ca_basemap_proj)
+
+
+tm_shape(ca_basemap_proj) + 
+   tm_borders(col = "grey88") + 
+tm_shape(ca_coastline_proj, bbox = CA_bbox) + 
+   tm_lines() 
+   
+```
+
+
+## Hex Code 
+
+#### Create hex grid object 
+```{r}
+# Create hex grid over CA 
+hex_grid <- st_make_grid(ca_basemap_proj, 
+                         n = c(12, 12), # smaller number = larger hex size 
+                         what = 'polygons', 
+                         square = FALSE, 
+                         flat_topped = TRUE) %>%  
+  st_sf %>% 
+  rowid_to_column('hex_id') # Add unique ID 
+
+# Check that CRS matches 
+st_crs(hex_grid) == st_crs(ca_basemap_proj)
+
+# View hex map 
+tm_shape(ca_basemap_proj) + 
+  tm_borders() +
+tm_shape(hex_grid) + 
+  tm_borders(col = "deepskyblue")
+```
+
+#### Filter hexes to coastline 
+```{r}
+# Create a 100 m buffer along coastline
+coast_buffered <- st_buffer(ca_coastline_proj, dist = 100)
+
+# Filter hexes that intersect with the buffer
+coastal_hex_grid <- st_filter(hex_grid, coast_buffered, .predicate = st_intersects)
+
+# View hex map 
+tm_shape(ca_basemap_proj) + 
+  tm_borders() +
+tm_shape(coastal_hex_grid) + 
+  tm_borders(col = "deepskyblue") + 
+  # Label hexes with 'hex_id'
+  tm_text(text = "hex_id", size = 0.5, col = "black", shadow = TRUE)  
+
+```
+
+
+Need to filter out some of the hexes: 
+
+hex_id to keep: 203, 188, 173, 166, 151, 136, 129, 114, 107, 92, 85, 70, 63, 48, 56, 49, 42, 35, 20, 13 
+
+```{r}
+# Filter hexes 
+coastal_hex_filter <- coastal_hex_grid %>% 
+  filter(hex_id %in% c(203, 188, 173, 166, 151, 136, 129, 114, 107, 92, 85, 70, 63, 48, 56, 49, 42, 35, 20, 13))
+
+# View filtered hex map 
+tm_shape(ca_basemap_proj) + 
+  tm_borders() +
+tm_shape(coastal_hex_filter) + 
+  tm_borders(col = "deepskyblue") + 
+  # Label hexes with 'hex_id'
+  tm_text(text = "hex_id", size = 0.5, col = "black", shadow = TRUE)  
+```
+
+
+## Generate some values for the hexes just for show 
+```{r}
+# Add a random value to each hexagon for demonstration (replace with your actual data)
+set.seed(123)  # for reproducibility
+coastal_hex_filter$value_column <- runif(nrow(coastal_hex_filter), min = 0, max = 100)  # Random values between 0 and 100
+
+
+# Map it 
+tm_shape(ca_basemap) + 
+  tm_borders(col = "grey88") +
+tm_shape(coastal_hex_filter) + 
+  tm_fill(col = "value_column", palette = "YlGnBu", style = "cont", title = "Value") +  # Color by the value column
+  tm_borders(col = "deepskyblue") + 
+  tm_layout(legend.title.size = 0.9,  # Smaller title size
+            legend.text.size = 0.5,   # Smaller legend text size
+            legend.width = 0.2,       # Narrower legend width
+            legend.height = 0.3,     # Smaller legend height
+            legend.title.fontface = "bold")
+```
+
+
