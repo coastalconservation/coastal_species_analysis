@@ -22,12 +22,9 @@ source(here::here('scripts', 'functions', 'clean_biodiv.R'))
 source(here::here('scripts', 'functions', 'model_sing_species.R'))
 ```
 
+I think to run multiple species we just have to subset before modeling
 
-# Read in Data
-
-### Read in biodiv data 
-
-### Read in rasters manually
+### Read in Raster Data
 
 ```{r}
 # Manually read in the rasters
@@ -74,10 +71,7 @@ env_00_load <- c(
 env_00_load <- stack(env_00_load)
 ```
 
-
-### Clean workflow for one species
-
-There is an issue doing this online because the clean_biodive function hard calls in the file
+### Read in Biodiv data
 
 ```{r}
 # Read in biodiversity data 
@@ -86,7 +80,6 @@ biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx',
                               quadrat_sheet = 'quadrat_summary_data',
                               swath_sheet = 'swath_summary_data')
 ```
-
 
 ### Modeling with Alaria marginata
 
@@ -105,39 +98,59 @@ alaria_obs <- alaria_data |>
   summarise(num_count = sum(total_count)) |>
   ungroup()
 ```
-```{r}
-alaria_obs_pa <- alaria_obs %>%
-  mutate(status = if_else(num_count >= 1,
-                          "presence",
-                          "absent"))
-```
 
+### Creating binary occurence column
 
 ```{r}
 # Expand rows & keep observation column
-alaria_obs_present <- alaria_obs |>
-  mutate(num_count >=1 ) |>
-  uncount(num_count) 
+alaria_pres_abs <- alaria_obs %>%
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+  dplyr::select(-num_count)
+         
 ```
 
 ### Running SDMs, GLM AND GAM
 
-For individual species model with one model type
+##### Testing with subsetting outside of the model
+
+This is to test running models with both absence and presence data. To get models to run with presence and abense data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This arguement tells the model where the presence/absence data should be found. 
 
 ```{r}
-# GLM
-SDM_glm <- modelling('GLM', subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'), 
-                 env_00_load, Xcol = 'longitude', Ycol = 'latitude', verbose = FALSE)
-plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
-```
-```{r}
-#ESDM <- ensemble_modelling(c('GAM', 'GLM','MARS', 'CTA','GBM', 'MAXENT', 'ANN', 'RF', 'SVM'), subset(alaria_obs_present, alaria_obs_present$species_lump == 'Alaria marginata'),
-                           #env_00_load, rep = 1, Xcol = 'longitude', Ycol = 'latitude',
-                          #ensemble.thresh = 0, verbose = FALSE)
-#plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+# Subset the data to the species of interest
+alaria_subset <- subset(alaria_pres_abs, species_lump == 'Alaria marginata')
 ```
 
-## Function for modeling a single species
+```{r}
+# Turn data into data frame
+alaria_subset <- as.data.frame(alaria_subset)
+
+# Check the structure to make sure it looks right
+str(alaria_subset)
+
+# Run the model and add in Pcol
+ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    alaria_subset, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    Pcol = 'occurrence',
+                    verbose = TRUE)
+
+
+```
+```{r}
+# Show popup about data
+plot(ESDM)
+```
+
+```{r}
+# Show single graph and auc information
+plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+
+knitr::kable(ESDM@evaluation)
+```
+
+### Function for modeling a single species with just presence data
 
 ```{r}
 single_species_model <- function(species){
@@ -161,22 +174,67 @@ plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 }
 ```
 
-Additionally, data sampling uncertainties (presences, pseudo-absences) may be addressed by running several replicates for each algorithm (rep argument).
-
-The package also provides an uncertainty map representing the between-algorithms variance. The degree of agreement between each pair of algorithms can be assessed through a correlation matrix giving the Pearson’s coefficient.
-
-ESDM <- ensemble_modelling(c('CTA', 'MARS'), subset(Occurrences, Occurrences$SPECIES == 'elliptica'),
-                           Env, rep = 1, Xcol = 'LONGITUDE', Ycol = 'LATITUDE',
-                          ensemble.thresh = 0, verbose = FALSE)
-plot(ESDM@projection, main = 'ESDM\nfor Cryptocarya elliptica\nwith CTA and MARS algorithms')
-
-https://cran.r-project.org/web/packages/SSDM/vignettes/SSDM.html#Summary_plot
-
-For each species, the package can store two results in raster format: (1) a continuous raster map giving the habitat suitability for presence-only data, and the probability of presence for presence/absence data; and (2) a binary presence/absence raster based on the threshold of habitat suitability that maximises a user-specified accuracy metric (see below).
-
 ```{r}
-single_species_model('Littorina plena/scutulata')
+single_species_model('Pisaster ochraceus')
 ```
 
 
+### Function for modeling with both presence and absence data
 
+
+```{r}
+abs_pres_model <- function(species){
+  
+  species_data <- biodiv_2025 %>% 
+  filter(species_lump == species)
+  
+  species_obs <- species_data |>
+  group_by(species_lump, latitude, longitude) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+  
+  # Expand rows & keep observation column
+  species_pres_abs <- species_obs %>%
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+  dplyr::select(-num_count)
+  
+  # Subset the species
+  species_subset <- subset(species_pres_abs, species_pres_abs$species_lump == species)
+  
+  # Turn subset into data frame
+  species_subset <- as.data.frame(species_subset)
+  
+# Run the model and add in Pcol
+ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    species_subset, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    Pcol = 'occurrence',
+                    verbose = FALSE)
+}
+```
+
+```{r}
+abs_pres_model('Pisaster ochraceus')
+```
+### To do:
+
+In order to ensure the difference in results is comming from adding in the presence and absence data, I still need to run the models without subseting outside of the function.
+
+# Scratch 
+
+```{r}
+alaria_pres_abs <- as.data.frame(alaria_pres_abs)
+```
+
+```{r}
+SDM_glm <- modelling('GLM', 
+                     alaria_obs_present, 
+                 env_00_load, 
+                 Xcol = 'longitude', 
+                 Ycol = 'latitude', 
+                 Pcol = 'occurrence', 
+                 verbose = FALSE)
+plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
+```
