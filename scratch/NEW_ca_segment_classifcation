@@ -1,0 +1,49 @@
+
+
+segment_path <- "/capstone/coastalconservation/data/raw/spatial_data/ca_segments/CA_coast_021425.csv"
+
+ca_segments <- read_csv(segment_path) %>%
+  rename(
+    segment_id = OID_,
+    latitude = POINT_Y
+  ) %>% 
+  mutate(
+    segment_id = rev(segment_id)
+  ) %>%
+  select(segment_id, latitude)
+
+# Sort segments by latitude descending (important for matching)
+ca_segments <- ca_segments[order(-ca_segments$latitude), ]
+
+ca_segments <- ca_segments %>%  
+  rename(
+    min_latitude = latitude
+  ) %>%
+  mutate(
+    max_latitude = lead(min_latitude, order_by = segment_id)
+  )
+
+segment_names <- c(
+  "1" = "Baja",
+  "2" = "Chula Vista",
+  "3" = "North County San Diego", 
+  "4" = "Orange County",
+  "5" = "Point Mugu",
+  "6" = "Southern Dangermond",
+  "7" = "Northern Dangermond",
+  "8" = "Morro Bay",
+  "9" = "Big Sur",
+  "10" = "Monterey Bay",
+  "11" = "San Francisco",
+  "12" = "Point Reyes",
+  "13" = "Bodega Bay",
+  "14" = "Fort Bragg",
+  "15" = "Humbolt",
+  "16" = "Eureka",
+  "17" = "Crescent City",
+  "18" = "Pacific North West"
+)
+
+ca_segments$segment_name <- segment_names[as.character(ca_segments$segment_id)]
+
+write.csv(ca_segments, "/capstone/coastalconservation/data/processed/ca_segments.csv")

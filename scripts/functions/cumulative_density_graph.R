@@ -49,16 +49,16 @@ cumulative_den_graph <- function(species_name){
     filter(species_lump == species_name)
   
   # Fit cumulative densities to logistic distribution
-  species_norm_logit <- glm(cum_den_norm ~ latitude * year_bin, 
+  species_norm_logit <- glm(cum_den_norm ~ distance * year_bin, 
                        binomial(link="logit"), 
                        species_cum_den)
   
-  species_ecdf_logit <- glm(cum_den_norm ~ latitude * year_bin, 
+  species_ecdf_logit <- glm(cum_den_norm ~ distance * year_bin, 
                        binomial(link="logit"), 
                        species_cum_den)
   
   # Calculate predicitons
-  species_pred <- expand_grid(latitude = seq(32, 36, length.out=1000),
+  species_pred <- expand_grid(distance = seq(32, 36, length.out=1000),
                               year_bin = species_cum_den$year_bin %>% unique()
                               ) %>% 
     mutate(
@@ -72,14 +72,14 @@ cumulative_den_graph <- function(species_name){
   species_extent_df <- species_pred %>% 
     group_by(year_bin) %>% 
     summarise(
-      max_lat_norm = approx(cum_den_norm, latitude, xout=0.95)$y,
-      min_lat_norm = approx(cum_den_norm, latitude, xout=0.05)$y,
-      max_lat_ecdf = approx(cum_den_ecdf, latitude, xout=0.95)$y,
-      min_lat_ecdf = approx(cum_den_ecdf, latitude, xout=0.05)$y
+      max_dist_norm = approx(cum_den_norm, distance, xout=0.95)$y,
+      min_dist_norm = approx(cum_den_norm, distance, xout=0.05)$y,
+      max_dist_ecdf = approx(cum_den_ecdf, distance, xout=0.95)$y,
+      min_dist_ecdf = approx(cum_den_ecdf, distance, xout=0.05)$y
     )
   
   # Create plot of range extents
-  extent_plot <- ggplot(species_cum_den, aes(x=latitude, 
+  extent_plot <- ggplot(species_cum_den, aes(x=distance, 
                                              y=cum_den_norm, 
                                              color=year_bin)) +
     geom_point() +

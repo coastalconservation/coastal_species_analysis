@@ -36,8 +36,8 @@ cum_den_df <- function(bio_df){
     mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
     # Group by species and 5-year bin
     group_by(species_lump, year_bin) %>%
-    # Arrange by latitude
-    arrange(latitude, .by_group = TRUE) %>%
+    # Arrange by coastline distance
+    arrange(distance, .by_group = TRUE) %>%
     # Calculate cumulative and normalized density
     mutate(
       cum_den = cumsum(density_per_m2),
@@ -49,7 +49,7 @@ cum_den_df <- function(bio_df){
       }
     ) %>%
     # Select relevant columns
-    select(cum_den, cum_den_norm, ecdf_values,
+    select(cum_den, cum_den_norm, ecdf_values, distance
            latitude, state_province, year, year_bin, species_lump)
   
   return(bio_df)
