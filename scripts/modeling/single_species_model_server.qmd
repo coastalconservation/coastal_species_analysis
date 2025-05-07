@@ -183,7 +183,7 @@ single_species_model('Pisaster ochraceus')
 ```
 
 
-### Function for modeling with both presence and absence data
+### Function for modeling with both presence and absence data where you can add env_load
 
 
 ```{r}
@@ -209,7 +209,7 @@ abs_pres_model <- function(species){
   species_subset <- as.data.frame(species_subset)
   
 # Run the model and add in Pcol
-ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+  ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
                     species_subset, 
                     env_00_load, 
                     Xcol = 'longitude', 
@@ -217,14 +217,76 @@ ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF',
                     Pcol = 'occurrence',
                     verbose = FALSE)
 
-plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm"))
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm\n using"))
+
+knitr::kable(ESDM@evaluation)
+
+plot(ESDM)
 }
 ```
 
 ```{r}
-abs_pres_model('Pisaster ochraceus')
+abs_pres_model('Gloiopeltis furcata')
 ```
+a
+```{r}
+abs_pres_model('Pisaster ochraceus', env_00_load)
+```
+
 Somehow, I am getting an error that one of the packages is using JAVA, but I am not sure which 
+
+### Past and pres
+
+SDM_projection <- project(SDM,Env_new)
+
+
+```{r}
+future_model <- function(species){
+  
+  species_data <- biodiv_2025 %>% 
+  filter(species_lump == species)
+  
+  species_obs <- species_data |>
+  group_by(species_lump, latitude, longitude) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+  
+  # Expand rows & keep observation column
+  species_pres_abs <- species_obs %>%
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+  dplyr::select(-num_count)
+  
+  # Subset the species
+  species_subset <- subset(species_pres_abs, species_pres_abs$species_lump == species)
+  
+  # Turn subset into data frame
+  species_subset <- as.data.frame(species_subset)
+  
+# Run the model and add in Pcol
+  ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    species_subset, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    Pcol = 'occurrence',
+                    verbose = FALSE)
+
+  ESDM_projection <- SSDM::project(ESDM, env_50_load)
+
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm"))
+
+knitr::kable(ESDM@evaluation)
+
+plot(ESDM_projection)
+}
+```
+
+
+
+```{r}
+future_model('Gloiopeltis furcata')
+```
+
 
 ### Comparing to Presence only models:
 
@@ -285,52 +347,6 @@ plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
 ```
 
 
-# TEST TEST
 
-```{r}
-abs_pres_model_compare <- function(species, env_hist, env_proj){
-  
-  species_data <- biodiv_2025 %>% 
-    filter(species_lump == species)
-  
-  species_obs <- species_data |>
-    group_by(species_lump, latitude, longitude) |>
-    summarise(num_count = sum(total_count)) |>
-    ungroup()
-  
-  # Add presence/absence column
-  species_pres_abs <- species_obs %>%
-    mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
-    dplyr::select(-num_count)
-  
-  # Convert to data frame
-  species_df <- as.data.frame(species_pres_abs)
 
-  # Fit ensemble model on historical environment
-  ESDM_hist <- ensemble_modelling(
-    algorithms = c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'),
-    Occurrences = species_df, 
-    Env = env_hist, 
-    Xcol = 'longitude', 
-    Ycol = 'latitude', 
-    Pcol = 'occurrence',
-    verbose = FALSE
-  )
-  
-  # Predict using projected future environment
-  proj_hist <- ESDM_hist@projection
-  proj_future <- predict(ESDM_hist, env_proj)
-
-  # Difference map
-  proj_diff <- proj_future - proj_hist
-  
-  # Plot outputs
-  plot(proj_hist, main = paste0("Historical SDM: ", species))
-  plot(proj_future, main = paste0("Projected SDM: ", species))
-  plot(proj_diff, main = paste0("Projected - Historical: ", species))
-  
-  return(list(historical = proj_hist, future = proj_future, difference = proj_diff))
-}
-
-```
 
