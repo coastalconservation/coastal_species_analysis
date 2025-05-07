@@ -101,19 +101,23 @@ alaria_obs <- alaria_data |>
 
 ### Creating binary occurence column
 
+There is an issue here using the `uncount()` function. Because we are now including absences, it does not know what to do with the zeros. A potential fix here is to create two data sets, one with just zeros and the other with the uncount() applied to the presence data and then stack them on top of each other. 
+
 ```{r}
 # Expand rows & keep observation column
 alaria_pres_abs <- alaria_obs %>%
-  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>%
   dplyr::select(-num_count)
-         
 ```
+
 
 ### Running SDMs, GLM AND GAM
 
 ##### Testing with subsetting outside of the model
 
-This is to test running models with both absence and presence data. To get models to run with presence and abense data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This arguement tells the model where the presence/absence data should be found. 
+This is to test running models with both absence and presence data. To get models to run with presence and absence data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This argument tells the model where the presence/absence data should be found. 
+
+It is still unknown why the dataset had to be turned into a dataframe, as it appears like it was always a dataframe.All the models appear to be working except the GAM
 
 ```{r}
 # Subset the data to the species of interest
@@ -134,20 +138,20 @@ ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF',
                     Xcol = 'longitude', 
                     Ycol = 'latitude', 
                     Pcol = 'occurrence',
-                    verbose = TRUE)
-
+                    verbose = FALSE)
 
 ```
+
 ```{r}
 # Show popup about data
-plot(ESDM)
+#plot(ESDM)
 ```
 
 ```{r}
 # Show single graph and auc information
-plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+#plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
 
-knitr::kable(ESDM@evaluation)
+#knitr::kable(ESDM@evaluation)
 ```
 
 ### Function for modeling a single species with just presence data
@@ -212,15 +216,56 @@ ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF',
                     Ycol = 'latitude', 
                     Pcol = 'occurrence',
                     verbose = FALSE)
+
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm"))
 }
 ```
 
 ```{r}
 abs_pres_model('Pisaster ochraceus')
 ```
-### To do:
+Somehow, I am getting an error that one of the packages is using JAVA, but I am not sure which 
+
+### Comparing to Presence only models:
 
 In order to ensure the difference in results is comming from adding in the presence and absence data, I still need to run the models without subseting outside of the function.
+
+```{r}
+# Create column with only presence
+alaria_obs_present <- alaria_obs |>
+  filter(num_count >=1 ) |>
+  uncount(num_count) 
+```
+
+```{r}
+# Subset the data to the species of interest
+alaria_subset2 <- subset(alaria_obs_present, species_lump == 'Alaria marginata')
+```
+
+```{r}
+# Turn alaria_subset2 into data.frame
+alaria_subset2 <- as.data.frame(alaria_subset2)
+```
+
+
+```{r}
+# Subset outside of model
+
+# Run model
+ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    alaria_subset2, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    verbose = FALSE)
+plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+```
+
+```{r}
+#abs_pres_model('Pisaster ochraceus')
+```
+
+
 
 # Scratch 
 
@@ -238,3 +283,54 @@ SDM_glm <- modelling('GLM',
                  verbose = FALSE)
 plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
 ```
+
+
+# TEST TEST
+
+```{r}
+abs_pres_model_compare <- function(species, env_hist, env_proj){
+  
+  species_data <- biodiv_2025 %>% 
+    filter(species_lump == species)
+  
+  species_obs <- species_data |>
+    group_by(species_lump, latitude, longitude) |>
+    summarise(num_count = sum(total_count)) |>
+    ungroup()
+  
+  # Add presence/absence column
+  species_pres_abs <- species_obs %>%
+    mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+    dplyr::select(-num_count)
+  
+  # Convert to data frame
+  species_df <- as.data.frame(species_pres_abs)
+
+  # Fit ensemble model on historical environment
+  ESDM_hist <- ensemble_modelling(
+    algorithms = c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'),
+    Occurrences = species_df, 
+    Env = env_hist, 
+    Xcol = 'longitude', 
+    Ycol = 'latitude', 
+    Pcol = 'occurrence',
+    verbose = FALSE
+  )
+  
+  # Predict using projected future environment
+  proj_hist <- ESDM_hist@projection
+  proj_future <- predict(ESDM_hist, env_proj)
+
+  # Difference map
+  proj_diff <- proj_future - proj_hist
+  
+  # Plot outputs
+  plot(proj_hist, main = paste0("Historical SDM: ", species))
+  plot(proj_future, main = paste0("Projected SDM: ", species))
+  plot(proj_diff, main = paste0("Projected - Historical: ", species))
+  
+  return(list(historical = proj_hist, future = proj_future, difference = proj_diff))
+}
+
+```
+
