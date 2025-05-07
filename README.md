@@ -4,38 +4,53 @@
 
 <h1 align="center">
 
-Assessing Range Shifts of Coastal Species to Inform Conservation in California’s Biogeographic Transition Zones
-
-<h2 align="left"> 
-
 Coastal Species Analysis Repository 
+
+
+
 
 
 ## Table of Contents 
 [Overview](#overview)
 
+[Data](#data)
+
 [Folder Descriptions](#folder-descriptions)
 
 [Repository Structure](#repository-structure)
-
-[Data](#data)
 
 [Authors and Contributors](#authors-and-contributors) 
 
 
 ## Overview 
 
-This repository contains all scripts used for identifying intertidal species ranges along the California coast, analyzing historical range and abundance, developing species distribution models, and creating habitat suitability maps. See the folder descriptions below for a detailed breakdown of the repository structure!
+This repository contains all scripts used to identify intertidal species ranges along the California coast, analyze historical range and abundance, develop species distribution models, and create habitat suitability maps. See the folder descriptions below for a detailed breakdown of the repository structure!
+
+## Data 
+
 
 ## Folder Descriptions 
 
-## Data 
+### scripts: 
+
+This folder contains all of the code scripts used to conduct our analysis. Each subfolder within this folder holds a different part of the analysis. 
+
+**functions/** 
+
+This folder contains functions used throughout the project: 
+
+- `buffer_classification.R`: Create range edge descriptions for each species at each buffer
+- `clean_biodiv.R`: Takes the MARINe CBS Excel file name and merges key sheets for presence-absence analysis
+- `cumulative_density_dataframe.R`: Computes the cumulative sum of density and the normalized cumulative density for each species group and year
+- `cumulative_density_graph.R`: Creates a cumulative density graph for a given species to visualize abundance changes over space and time
+- `model_sing_species.R`: Runs an ensemble species distribution model for a single given species
+- `range_classification.R`: Calculates species ranges within defined coastline segments using species biodiversity data
+- `range_extent_prediction.R`: Creates a visualization of a species' range boundaries over time by plotting the latitudinal extent for each year
+
 
 ## Repository Structure
 ```
 coastal_species_analysis 
-├── plots/
-│	├── figures
 |
 ├── scripts/   # Analysis and modeling scripts
 │	
