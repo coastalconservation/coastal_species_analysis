@@ -27,6 +27,8 @@ source(here("scripts", "functions", "cumulative_density_graph.R"))
 ```{r}
 # Load data
 range_edges <- read_csv(here("data", "processed", "range_list.csv"))
+marine_path <- "/capstone/coastalconservation/data/processed/marine_site_segments.csv"
+marine_site_segments <- read_csv(marine_path)
 
 # Pull species with range edges in Dangermond
 
@@ -48,13 +50,16 @@ northern_dangermond_species_list <- northern_dangermond_range_edges$species_lump
 biodiv_df <- clean_biodiv('cbs_data_2025.xlsx',
                               point_contact_sheet = 'point_contact_summary_layered',
                               quadrat_sheet = 'quadrat_summary_data',
-                              swath_sheet = 'swath_summary_data')
+                              swath_sheet = 'swath_summary_data') %>% 
+             left_join(
+              marine_site_segments %>%
+              select(latitude, segment_id, segment_name, coastline_km))
 ```
 
 ```{r}
 northern_cum_den <- cum_den_df(biodiv_df) %>% 
   filter(species_lump %in% northern_dangermond_species_list) %>% 
-  filter(latitude >=32.09)
+  filter(state_province=="California")
 ```
 
 ```{r}
@@ -145,32 +150,35 @@ biodiv_df %>%
 # ECDF
 
 ```{r}
-
-ggplot(northern_cum_den, aes(x = latitude)) +
-  # Plot the true CDF - assuming you have calculated this already
-  # and it's stored in a column called 'true_cdf'
-  geom_point(aes(y = cum_den_norm, color = "Normalized CDF"), size = 1) +
+ggplot(northern_cum_den,
+       aes(x = latitude)) +
+  # Plot the Normalized CDF
+  geom_line(aes(y = cum_den_norm, color = "Normalized CDF"), size = 1) +
   
-  # Plot the ECDF
-  geom_point(aes(y = ecdf_values, color = "Empirical CDF"), size = 1) +
+  # Plot the Empirical CDF (if available)
+  # geom_line(aes(y = ecdf_values, color = "Empirical CDF"), size = 1) +
   
-  # Add labels and title
-labs(
-  title = "Comparison of Normalized Cumulative Density and Empirical CDF",
-  x = "Latitude",
-  y = "Cumulative Probability",
-  color = "Distribution Type"
-) +
+  # Facet by 5-year bin
+  facet_wrap(~ year_bin, scales = "free_x") +
   
-  # Custom colors
+  # Labels and title
+  labs(
+    title = "Normalized vs Empirical CDF for Tegula aureotincta by 5-Year Bins",
+    x = "Latitude",
+    y = "Cumulative Probability",
+    color = "Distribution Type"
+  ) +
+  
+  # Custom color mapping
   scale_color_manual(values = c("Normalized CDF" = "blue", "Empirical CDF" = "red")) +
   
-  # Theme customization
+  # Theme styling
   theme_minimal() +
   theme(
     legend.position = "bottom",
     plot.title = element_text(hjust = 0.5)
   )
+
 ```
 
 ## Matteo

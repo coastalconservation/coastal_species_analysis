@@ -49,31 +49,45 @@ cumulative_den_graph <- function(species_name){
     filter(species_lump == species_name)
   
   # Fit cumulative densities to logistic distribution
-  species_logit <- glm(cum_den_norm ~ latitude * year, binomial(link="logit"), species_cum_den)
+  species_norm_logit <- glm(cum_den_norm ~ distance * year_bin, 
+                       binomial(link="logit"), 
+                       species_cum_den)
+  
+  species_ecdf_logit <- glm(cum_den_norm ~ distance * year_bin, 
+                       binomial(link="logit"), 
+                       species_cum_den)
   
   # Calculate predicitons
-  species_pred <- expand_grid(latitude = seq(32, 36, length.out=1000),
-                              year = 2000:2024) %>% 
+  species_pred <- expand_grid(distance = seq(32, 36, length.out=1000),
+                              year_bin = species_cum_den$year_bin %>% unique()
+                              ) %>% 
     mutate(
-      cum_den_norm = predict(species_logit, newdata = ., type="response")
+      cum_den_norm = predict(species_norm_logit,
+                             newdata = ., type="response"),
+      cum_den_ecdf = predict(species_ecdf_logit,
+                             newdata = ., type="response")
     ) 
   
   # Approximate northern range (95th percentile) and southern range (5th percentile) by year
   species_extent_df <- species_pred %>% 
-    group_by(year) %>% 
+    group_by(year_bin) %>% 
     summarise(
-      max_lat = approx(cum_den_norm, latitude, xout=0.95)$y,
-      min_lat = approx(cum_den_norm, latitude, xout=0.05)$y
+      max_dist_norm = approx(cum_den_norm, distance, xout=0.95)$y,
+      min_dist_norm = approx(cum_den_norm, distance, xout=0.05)$y,
+      max_dist_ecdf = approx(cum_den_ecdf, distance, xout=0.95)$y,
+      min_dist_ecdf = approx(cum_den_ecdf, distance, xout=0.05)$y
     )
   
   # Create plot of range extents
-  extent_plot <- ggplot(species_cum_den, aes(x=latitude, y=cum_den_norm, color=year)) +
+  extent_plot <- ggplot(species_cum_den, aes(x=distance, 
+                                             y=cum_den_norm, 
+                                             color=year_bin)) +
     geom_point() +
-    geom_line(aes(group = year), data=species_pred) +
+    geom_line(aes(group = year_bin), data=species_pred) +
     xlim(32, 36) +
     geom_hline(yintercept=.95) +
     geom_vline(xintercept = 34.449) +
-    labs(title = "Northern Range Edge Species Cumulative Density")
+    labs(title = paste(species_name, " - Cumulative Density"))
   
   return(extent_plot)
 }

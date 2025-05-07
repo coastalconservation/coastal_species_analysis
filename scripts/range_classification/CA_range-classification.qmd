@@ -18,11 +18,7 @@ who, what, analysis?
 
 ```{r}
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
-source(here::here('scripts', 'functions', 'buffer_classification.R'))
-source(here::here('scripts', 'functions', 'range_classification.R'))
 ```
-
-
 
 ## Output
 
@@ -30,13 +26,27 @@ what, where it go?
 
 ## Analysis
 
-use function
-
-run species_ranges.R
-
+How many species have range edges in Dangemond?
 
 ```{r}
-write_csv(clean_biodiv(), here("data","processed", "MARINe_full.csv"))
-write_csv(range_classification(), here("data","processed", "range_classification_list.csv"))
+processed_data_path <- "/capstone/coastalconservation/data/processed"
+species_extent_path <- file.path(processed_data_path, "species_extent.csv")
+species_extent <- read_csv(species_extent_path)
 ```
 
+```{r}
+library(stringr)
+
+dangermond_edge_species <- species_extent %>% 
+  filter(str_detect(southern_extent_name, "Dangermond") |
+         str_detect(northern_extent_name, "Dangermond")
+        )
+```
+
+```{r}
+dangermond_edge_species
+```
+
+```{r}
+species_extent %>% names()
+```

@@ -49,10 +49,12 @@ range_extent_graph <- function(species_name){
     filter(species_lump == species_name)
   
   # Fit logistic regression model to predict cumulative density from latitude and year
-  species_logit <- glm(cum_den_norm ~ latitude * year, binomial(link="logit"), species_cum_den)
+  species_logit <- glm(cum_den_norm ~ distance * year, binomial(link="logit"), species_cum_den)
   
   # Generate predictions across a grid of latitudes and years
-  species_pred <- expand_grid(latitude = seq(32, 36, length.out=1000),
+  species_pred <- expand_grid( # find appropriate distance
+                              latitude = seq(32, 36, length.out=1000),
+                              #distance = seq(32, 36, length.out=1000),
                               year = 2000:2024) %>% 
     mutate(
       cum_den_norm = predict(species_logit, newdata = ., type="response")
@@ -63,9 +65,9 @@ range_extent_graph <- function(species_name){
     group_by(year) %>% 
     summarise(
       # Northern edge (95th percentile)
-      max_lat = approx(cum_den_norm, latitude, xout=0.95)$y, 
+      max_lat = approx(cum_den_norm, distance, xout=0.95)$y, 
       # Southern edge (5th percentile)
-      min_lat = approx(cum_den_norm, latitude, xout=0.05)$y  
+      min_lat = approx(cum_den_norm, latdistancetude, xout=0.05)$y  
     )
   
   # Create plot showing the range boundaries over time
