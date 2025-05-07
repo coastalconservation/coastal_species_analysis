@@ -30,6 +30,9 @@
 #' @export
 cum_den_df <- function(bio_df){
   bio_df <- bio_df %>% 
+             left_join(
+              marine_site_segments %>%
+              select(latitude, segment_id, segment_name, coastline_km)) %>% 
     # Filter out point contact entries
     filter(collection_source != "point contact") %>%
     # Create a 5-year bin variable
@@ -37,7 +40,7 @@ cum_den_df <- function(bio_df){
     # Group by species and 5-year bin
     group_by(species_lump, year_bin) %>%
     # Arrange by coastline distance
-    arrange(distance, .by_group = TRUE) %>%
+    arrange(coastline_km, .by_group = TRUE) %>%
     # Calculate cumulative and normalized density
     mutate(
       cum_den = cumsum(density_per_m2),
@@ -49,7 +52,7 @@ cum_den_df <- function(bio_df){
       }
     ) %>%
     # Select relevant columns
-    select(cum_den, cum_den_norm, ecdf_values, distance
+    select(cum_den, cum_den_norm, ecdf_values, coastline_km,
            latitude, state_province, year, year_bin, species_lump)
   
   return(bio_df)
