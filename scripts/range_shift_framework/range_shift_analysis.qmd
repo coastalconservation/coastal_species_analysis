@@ -27,6 +27,8 @@ source(here("scripts", "functions", "cumulative_density_graph.R"))
 ```{r}
 # Load data
 range_edges <- read_csv(here("data", "processed", "range_list.csv"))
+marine_path <- "/capstone/coastalconservation/data/processed/marine_site_segments.csv"
+marine_site_segments <- read_csv(marine_path)
 
 # Pull species with range edges in Dangermond
 
@@ -48,7 +50,10 @@ northern_dangermond_species_list <- northern_dangermond_range_edges$species_lump
 biodiv_df <- clean_biodiv('cbs_data_2025.xlsx',
                               point_contact_sheet = 'point_contact_summary_layered',
                               quadrat_sheet = 'quadrat_summary_data',
-                              swath_sheet = 'swath_summary_data')
+                              swath_sheet = 'swath_summary_data') %>% 
+             left_join(
+              marine_site_segments %>%
+              select(latitude, segment_id, segment_name, coastline_km))
 ```
 
 ```{r}
