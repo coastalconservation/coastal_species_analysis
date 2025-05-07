@@ -42,8 +42,11 @@ range_classification <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
     # Summarize biodiversity data by grouping by site, species, and year, and calculate total counts
     biodiv_total <- biodiv_merge %>%
       group_by(marine_site_name, latitude, longitude, species_lump, year) %>%
-      summarise(num_count = sum(total_count, na.rm = TRUE)) %>% # Sum the count of species observed
-      mutate(presence = case_when(num_count >= 1 ~ TRUE, TRUE ~ FALSE)) # Determine presence/absence based on num_count
+      mutate(num_count = sum(total_count, na.rm = TRUE)) %>% # Sum the count of species observed
+      mutate(presence = case_when(
+        (total_count > 0 | number_of_hits > 0) ~ TRUE,
+        TRUE ~ FALSE)) %>%
+      ungroup()
     
     # Sort the latitudes of the coastline segments in ascending order
     coastline_lat <- ca_breaks$lat %>%

@@ -4,9 +4,11 @@ segment_path <- "/capstone/coastalconservation/data/raw/spatial_data/ca_segments
 
 ca_segments <- read_csv(segment_path) %>%
   rename(
+    # Rename columns 
     segment_id = OID_,
     latitude = POINT_Y
   ) %>% 
+  # Order from south to north
   mutate(
     segment_id = rev(segment_id)
   ) %>%

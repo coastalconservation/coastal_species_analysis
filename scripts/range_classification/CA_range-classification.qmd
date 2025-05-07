@@ -22,8 +22,26 @@ source(here::here('scripts', 'functions', 'buffer_classification.R'))
 source(here::here('scripts', 'functions', 'range_classification.R'))
 ```
 
+```{r}
+range_classification(cbs_excel_name = 'cbs_data_2025.xlsx', point_contact_sheet = 'point_contact_summary_layered',
+                     quadrat_sheet = 'quadrat_summary_data', swath_sheet = 'swath_summary_data')
+```
 
+```{r}
+range_classification_list <- read_csv( here("data","processed", "range_classification_list.csv"))
+```
 
+```{r}
+a <- range_classification_list  %>% 
+filter(range_edge_category == "Northern Range Edge") %>%
+filter(segment_name == "Southern Dangermond")
+```
+
+```{r}
+a1 <- range_classification_list  %>% 
+filter(range_edge_category == "Northern Range Edge") %>%
+filter(segment_name == "Northern Dangermond")
+```
 ## Output
 
 what, where it go?
