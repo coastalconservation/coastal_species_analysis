@@ -22,6 +22,8 @@ source(here("scripts", "functions", "clean_biodiv.R"))
 source(here("scripts", "functions", "cumulative_density_dataframe.R"))
 source(here("scripts", "functions", "range_extent_prediction.R"))
 source(here("scripts", "functions", "cumulative_density_graph.R"))
+
+ggsave("RopPou_cumulative.png", cumulative_den_graph("Roperia poulsoni"), bg="white")
 ```
 
 ```{r}
@@ -51,86 +53,30 @@ northern_cum_den <- cum_den_df(biodiv_df) %>%
   filter(state_province=="California")
 ```
 
-```{r}
-north_logit <- glm(cum_den_norm ~ coastline_km * year_bin, binomial(link="logit"), northern_cum_den)
-
-species_ecdf_logit <- glm(cum_den_norm ~ coastline_km * year_bin, 
-                      binomial(link = "logit"), 
-                      northern_cum_den)
-
-```
 
 ```{r}
-north_pred <- expand_grid(coastline_km = seq(64727.0844, 797950.6234, length.out = 1000),
-                          year_bin = northern_cum_den$year_bin %>% unique()
-                         ) %>% 
-    mutate(
-      cum_den_norm = predict(north_logit,
-                             newdata = ., type = "response"),
-      cum_den_ecdf = predict(species_ecdf_logit,
-                             newdata = ., type = "response")
-    ) 
+cum_den_df(biodiv_df) %>%
+  group_by(state_province) %>%
+  slice_max(order_by = coastline_km, n = 1, with_ties = FALSE)
 ```
 
-```{r}
-library(car)
-Anova(north_logit)
-coef(north_logit)
-summary(north_logit)
-```
-
-
-```{r}
-ggplot(northern_cum_den, aes(x=coastline_km, y=cum_den_norm, color=year_bin)) +
- geom_point() +
-  geom_line(aes(group = year_bin), data=north_pred) +
-  xlim(64727.0844, 797950.6234) +
-  geom_hline(yintercept=.95) +
-  labs(title = "Northern Range Edge Species Cumulative Density")
-```
-
-Dangemond Lat -> 34.449
-
-```{r}
-northern_95 <- north_pred %>% 
-  group_by(year) %>% 
-  summarise(
-    max_lat = approx(cum_den_norm, latitude, xout=0.95)$y,
-    min_lat = approx(cum_den_norm, latitude, xout=0.05)$y
-  )
-
-ggplot(northern_95) +
-  geom_point(aes(year, max_lat), color="red") +
-  geom_point(aes(year, min_lat), color="blue") +
-  geom_hline(yintercept = 34.449)
-```
-
-
-
-
-## Roperia poulsoni
+## Macron lividus
 ```{r}
 # max latitude ever
-max((biodiv_df %>% filter(species_lump=="Roperia poulsoni", density_per_m2>0))$latitude)
+max((biodiv_df %>% 
+      filter(species_lump=="Macron lividus",
+            (density_per_m2>0|total_count>0)))$latitude)
 
 # Roperia poulsoni has Northern Range edge in Southern Dangermond
-cumulative_den_graph("Roperia poulsoni")
-range_extent_graph("Roperia poulsoni")
+
+ggsave("RopPou_cumulative.png", cumulative_den_graph("Roperia poulsoni"), bg="white")
+range_extent_graph("Macron lividus")
 ```
 
 ```{r}
 ggplot(biodiv_df %>% filter(species_lump=="Roperia poulsoni"),
        aes(x=year, y=latitude, aes=density_per_m2)) +
   geom_point()
-```
-
-
-## Split data
-```{r}
-northern_cum_den_split <- cum_den_df(biodiv_df) %>% 
-  filter(species_lump %in% northern_dangermond_species_list) %>% 
-  group_by(species_lump) %>% 
-  group_split()
 ```
 
 # Min and Max lat
@@ -144,38 +90,3 @@ biodiv_df %>%
             max_lat = max(latitude)) %>% 
   View()
 ```
-
-# ECDF
-
-```{r}
-ggplot(northern_cum_den,
-       aes(x = latitude)) +
-  # Plot the Normalized CDF
-  geom_line(aes(y = cum_den_norm, color = "Normalized CDF"), size = 1) +
-  
-  # Plot the Empirical CDF (if available)
-  # geom_line(aes(y = ecdf_values, color = "Empirical CDF"), size = 1) +
-  
-  # Facet by 5-year bin
-  facet_wrap(~ year_bin, scales = "free_x") +
-  
-  # Labels and title
-  labs(
-    title = "Normalized vs Empirical CDF for Tegula aureotincta by 5-Year Bins",
-    x = "Latitude",
-    y = "Cumulative Probability",
-    color = "Distribution Type"
-  ) +
-  
-  # Custom color mapping
-  scale_color_manual(values = c("Normalized CDF" = "blue", "Empirical CDF" = "red")) +
-  
-  # Theme styling
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(hjust = 0.5)
-  )
-
-```
-

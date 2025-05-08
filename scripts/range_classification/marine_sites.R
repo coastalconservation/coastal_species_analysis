@@ -29,7 +29,8 @@ marine_sites <- biodiv_df %>%
 
 # Define helper function to assign segment_id based on site latitude
 assign_segment_id <- function(site_lat, segments) {
-  possible <- segments %>% filter(min_latitude <= site_lat)
+  possible <- segments %>% 
+    filter(min_latitude <= site_lat)
   if (nrow(possible) > 0) {
      # choose the first/lowest possible match
     return(possible$segment_id[1])
