@@ -13,8 +13,7 @@ Current issues:
 
 Map is not always using the same scale so I am getting different rasters: Solved by using set.seed
 Inputing certain species into function is causing function to crash (Callianax biplicata, Spyridia filamentosa)
-Legend is not consistently 0-1
-Function does not seem to be running consistently 
+Legend is not consistently 0-1, how do we nake the legend consistent and show the change?
 
 
 ```{r}
@@ -30,6 +29,7 @@ library(shinyFiles) # For ssdm shiny interface
 library(here)
 library(sf)
 library(tmap)
+library(maptiles)
 
 # Load functions 
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
@@ -39,7 +39,7 @@ source(here::here('scripts', 'functions', 'single_species_model.R'))
 I think to run multiple species we just have to subset before modeling
 
 ```{r}
-single_species_model('Hedophyllum sessile')
+single_species_model('Pisaster ochraceus')
 ```
 
 
@@ -98,6 +98,11 @@ biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx',
                               point_contact_sheet = 'point_contact_summary_layered',
                               quadrat_sheet = 'quadrat_summary_data',
                               swath_sheet = 'swath_summary_data')
+```
+
+
+```{r}
+unique(biodiv_2025$species_lump)
 ```
 
 ### Modeling with Alaria marginata
@@ -176,7 +181,7 @@ ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF',
 ### Function for modeling a single species with just presence data
 
 ```{r}
-single_species_model <- function(species){
+single_species_model2 <- function(species){
   
   species_data <- biodiv_2025 %>% 
   filter(species_lump == species)
@@ -198,7 +203,7 @@ plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 ```
 
 ```{r}
-single_species_model('Pisaster ochraceus')
+single_species_model2('Pisaster ochraceus')
 ```
 
 
@@ -245,7 +250,7 @@ plot(ESDM)
 ```
 
 ```{r}
-abs_pres_model('Grateloupia californica')
+abs_pres_model('Pisaster ochraceus')
 ```
 a
 ```{r}
@@ -292,7 +297,7 @@ future_model <- function(species){
 
   ESDM_projection <- SSDM::project(ESDM, env_50_load)
 
-plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm"))
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " in 2050 with ESDM algorithm"))
 
 knitr::kable(ESDM@evaluation)
 
@@ -320,6 +325,23 @@ change_map <- ESDM_projection@projection - ESDM@projection
 plot(change_map, main = paste0("Change in suitability (2050 - now)\nfor ", species))
 
 
+# Aesthetics for tmap
+
+```{r}
+pisaster_tmap_rast <- rast(here("scripts", "modeling", "future_change_output_rasters", "ESDM_Pisaster_ochraceus_change.tif"))
+```
+
+```{r}
+tmap_mode("view")
+
+tm_shape(pisaster_tmap_rast) +
+  tm_raster(midpoint = 0,
+            breaks = seq(-1, 1, by = 0.2)) +
+  # either esri ocean or a more plane one 
+  tm_basemap("Esri.OceanBasemap")
+  
+```
+
 
 # TEST TMAP FUNCTION FOR CHANGE IN HABITAT
 
@@ -328,35 +350,33 @@ making t-map that will show change in expected habitat
 ```{r}
 tmap_change_map <- function(species, save_plot = FALSE) {
   # Define file path for the change raster
-  change_path <- here::here("scripts", "modeling", "future_output_rasters", 
+  change_path <- here::here("scripts", "modeling", "future_change_output_rasters", 
                             paste0("ESDM_", gsub(" ", "_", species), "_change.tif"))
 
   # Load the change raster
   change_rast <- rast(change_path)
 
- breaks_seq <- seq(-1, 1, by = 0.2)
-
   # Create tmap
-  tm <- tm_shape(change_rast) +
-    tm_raster(
-      title = "Change in Habitat Suitability",
-      palette = "-RdBu",
-      style = "fixed",
-      breaks = breaks_seq,
-      legend.show = TRUE
-    ) +
-    tm_layout(
-      main.title = paste0("Change in Suitability (2050 - Now)\n", species),
-      legend.outside = TRUE
+  tmap_mode("view")
+  
+  map <- tm_shape(pisaster_tmap_rast) +
+  tm_raster(midpoint = 0,
+            breaks = seq(-1, 1, by = 0.2)) +
+  # either esri ocean or a more plane one 
+  tm_basemap("Esri.OceanBasemap") +
+  tm_layout(
+    main.title = paste0("Change in Suitability (2050 - Now)\n", species),
+    legend.outside = TRUE
     )
-  print(tm)
+  
+  print(map)
 }
 
 
 ```
 
 ```{r}
-tmap_change_map('Hedophyllum sessile')
+tmap_change_map('Pisaster ochraceus')
 ```
 
 # Function for getting the rasters for every species
