@@ -32,22 +32,6 @@ This repository contains all scripts used to identify intertidal species ranges 
 This folder contains all of the code scripts used to conduct our analysis. Each subfolder within this folder holds a different part of the analysis. 
 
 --------------------------------------------------------------------------------------------------------------
-
-**functions/** 
-
-This folder contains functions used throughout the project. Here are the descriptions of each function and where each function is utilized:  
-
-
-| File Name                                                 |  Description                          | Usage
-| ----------------------------------------------------------| ------------------------------------- |----------------------------|
-| `buffer_classification.R` |  Create range edge descriptions for each species at each buffer | range_classification/ | 
-| `clean_biodiv.R` | Takes the MARINe CBS Excel file name and merges key sheets for presence-absence analysis | range_classification/,  range_shift_framework/,  modeling/ |
-| `cumulative_density_dataframe.R` | Computes the cumulative sum of density and the normalized cumulative density for each species group and year | range_shift_framework/ | 
-| `model_sing_species.R` | Runs an ensemble species distribution model for a single given species | modeling/ | 
-| `range_classification.R` | Calculates species ranges within defined coastline segments using species biodiversity data | range_classification/ | 
-| `range_extent_prediction.R` | Creates a visualization of a species' range boundaries over time by plotting the latitudinal extent for each year | range_shift_framework/ | 
-
-
 **range_classification/**
 
 This folder contains the scripts used in identifying the range edges of intertidal species along the California coast. To view more about the workflow of this part of the analysis, see the `CA_range_classification.qmd` document within this folder that outlines the methods used, sources the functions, and executes the analysis. 
@@ -60,6 +44,21 @@ This folder contains the scripts used in analyzing abundance trends of a select 
 **modeling/** 
 
 This folder contains all the scripts used in producing the habitat suitability maps based on ensemble species distribution models for a select group of intertidal species that were identified as having a range edge near Point Conception. The purpose of this analysis is to model where suitable habitat for a particular species has been historically based on the MARINe biodiversity survey data, predict the suitable habitat in the year 2050 based on a middle-of-the-road emission scenario, and create a change detection map that identifies predicted loss of habitat. To view the process of this analysis, see the `INSERT QMD NAME` document in this folder that sources all the functions, runs the species distribution models, and prepares the habitat suitability maps for the dashboard.   
+
+**functions/** 
+
+This folder contains functions used throughout the project. Here are the descriptions of each function and where each function is utilized:  
+
+
+| File Name                                                 |  Description                          | Project Component 
+| ----------------------------------------------------------| ------------------------------------- |----------------------------|
+| `buffer_classification.R` |  Create range edge descriptions for each species at each buffer | range_classification/ | 
+| `clean_biodiv.R` | Takes the MARINe CBS Excel file name and merges key sheets for presence-absence analysis | range_classification/,  range_shift_framework/,  modeling/ |
+| `cumulative_density_dataframe.R` | Computes the cumulative sum of density and the normalized cumulative density for each species group and year | range_shift_framework/ | 
+| `model_sing_species.R` | Runs an ensemble species distribution model for a single given species | modeling/ | 
+| `range_classification.R` | Calculates species ranges within defined coastline segments using species biodiversity data | range_classification/ | 
+| `range_extent_prediction.R` | Creates a visualization of a species' range boundaries over time by plotting the latitudinal extent for each year | range_shift_framework/ | 
+
 
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
