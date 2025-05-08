@@ -53,10 +53,6 @@ cumulative_den_graph <- function(species_name){
                        binomial(link = "logit"), 
                        species_cum_den)
   
-  species_ecdf_logit <- glm(cum_den_norm ~ coastline_km * year_bin, 
-                       binomial(link = "logit"), 
-                       species_cum_den)
-  
   # Calculate predicitons
   species_pred <- expand_grid(
     coastline_km = seq(64727.0844, 797950.6234, length.out = 1000),
@@ -65,27 +61,15 @@ cumulative_den_graph <- function(species_name){
     mutate(
       cum_den_norm = predict(species_norm_logit,
                              newdata = ., type = "response"),
-      cum_den_ecdf = predict(species_ecdf_logit,
-                             newdata = ., type = "response")
-    ) 
-  
-  # Approximate northern range (95th percentile) and southern range (5th percentile) by year
-  species_extent_df <- species_pred %>%
-    group_by(year_bin) %>%
-    summarise(
-      max_dist_norm = approx(cum_den_norm, coastline_km, xout = 0.95)$y,
-      min_dist_norm = approx(cum_den_norm, coastline_km, xout = 0.05)$y,
-      max_dist_ecdf = approx(cum_den_ecdf, coastline_km, xout = 0.95)$y,
-      min_dist_ecdf = approx(cum_den_ecdf, coastline_km, xout = 0.05)$y
     )
-  
+
   # Create plot of range extents
   extent_plot <- ggplot(species_cum_den, aes(x = coastline_km, 
                                              y = cum_den_norm, 
                                              color = year_bin)) +
     geom_point() +
     geom_line(aes(group = year_bin), data=species_pred) +
-    xlim(32, 36) +
+    xlim(64727.0844, 797950.6234) +
     geom_hline(yintercept = .95) +
     geom_vline(xintercept = 520859.2599) +
     labs(title = paste(species_name, " - Cumulative Density"))

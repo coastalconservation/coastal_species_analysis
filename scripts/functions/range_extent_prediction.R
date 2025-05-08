@@ -70,6 +70,17 @@ range_extent_graph <- function(species_name){
       min_lat = approx(cum_den_norm, coastline_km, xout=0.05)$y  
     )
   
+
+  # Approximate northern range (95th percentile) and southern range (5th percentile) by year
+  species_extent_df <- species_pred %>%
+    group_by(year_bin) %>%
+    summarise(
+      max_dist_norm = approx(cum_den_norm, coastline_km, xout = 0.95)$y,
+      min_dist_norm = approx(cum_den_norm, coastline_km, xout = 0.05)$y,
+      max_dist_ecdf = approx(cum_den_ecdf, coastline_km, xout = 0.95)$y,
+      min_dist_ecdf = approx(cum_den_ecdf, coastline_km, xout = 0.05)$y
+    )
+    
   # Create plot showing the range boundaries over time
   extent_plot <- ggplot(species_extent_df) +
     # Northern boundary in red

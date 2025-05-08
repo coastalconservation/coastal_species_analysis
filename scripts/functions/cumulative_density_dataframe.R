@@ -29,11 +29,11 @@
 #' @import dplyr
 #' @export
 cum_den_df <- function(bio_df){
-  bio_df <- bio_df %>% 
+  bio_df <- bio_df %>%
              left_join(
               marine_path %>%
               select(marine_site_name, coastline_km)
-              ) %>% 
+              ) %>%
     # Filter out point contact entries
     filter(collection_source != "point contact") %>%
     # Create a 5-year bin variable
