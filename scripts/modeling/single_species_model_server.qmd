@@ -2,7 +2,20 @@
 title: "loading data from server"
 format: html
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
+
+Notes: 
+Should probably make it so that it tells the user which models were used 
+
+Current issues:
+
+Map is not always using the same scale so I am getting different rasters: Solved by using set.seed
+Inputing certain species into function is causing function to crash (Callianax biplicata, Spyridia filamentosa)
+Legend is not consistently 0-1
+Function does not seem to be running consistently 
+
 
 ```{r}
 # Load packages
@@ -16,13 +29,19 @@ library(purrr)
 library(shinyFiles) # For ssdm shiny interface
 library(here)
 library(sf)
+library(tmap)
 
 # Load functions 
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
-source(here::here('scripts', 'functions', 'model_sing_species.R'))
+source(here::here('scripts', 'functions', 'single_species_model.R'))
 ```
 
 I think to run multiple species we just have to subset before modeling
+
+```{r}
+single_species_model('Hedophyllum sessile')
+```
+
 
 ### Read in Raster Data
 
@@ -226,7 +245,7 @@ plot(ESDM)
 ```
 
 ```{r}
-abs_pres_model('Gloiopeltis furcata')
+abs_pres_model('Grateloupia californica')
 ```
 a
 ```{r}
@@ -284,69 +303,86 @@ plot(ESDM_projection)
 
 
 ```{r}
-future_model('Gloiopeltis furcata')
+future_model('Grateloupia californica')
 ```
 
 
-### Comparing to Presence only models:
 
-In order to ensure the difference in results is comming from adding in the presence and absence data, I still need to run the models without subseting outside of the function.
+
+create function that provides a raster
+then create a function that provides a map
+
+Need to make it so it cleans the species name into one word instead of two or use a _
+
+To plot change over time:
+
+change_map <- ESDM_projection@projection - ESDM@projection
+plot(change_map, main = paste0("Change in suitability (2050 - now)\nfor ", species))
+
+
+
+# TEST TMAP FUNCTION FOR CHANGE IN HABITAT
+
+making t-map that will show change in expected habitat
 
 ```{r}
-# Create column with only presence
-alaria_obs_present <- alaria_obs |>
-  filter(num_count >=1 ) |>
-  uncount(num_count) 
+tmap_change_map <- function(species, save_plot = FALSE) {
+  # Define file path for the change raster
+  change_path <- here::here("scripts", "modeling", "future_output_rasters", 
+                            paste0("ESDM_", gsub(" ", "_", species), "_change.tif"))
+
+  # Load the change raster
+  change_rast <- rast(change_path)
+
+ breaks_seq <- seq(-1, 1, by = 0.2)
+
+  # Create tmap
+  tm <- tm_shape(change_rast) +
+    tm_raster(
+      title = "Change in Habitat Suitability",
+      palette = "-RdBu",
+      style = "fixed",
+      breaks = breaks_seq,
+      legend.show = TRUE
+    ) +
+    tm_layout(
+      main.title = paste0("Change in Suitability (2050 - Now)\n", species),
+      legend.outside = TRUE
+    )
+  print(tm)
+}
+
+
 ```
 
 ```{r}
-# Subset the data to the species of interest
-alaria_subset2 <- subset(alaria_obs_present, species_lump == 'Alaria marginata')
+tmap_change_map('Hedophyllum sessile')
 ```
+
+# Function for getting the rasters for every species
 
 ```{r}
-# Turn alaria_subset2 into data.frame
-alaria_subset2 <- as.data.frame(alaria_subset2)
+all_species_rast <- function(data_set) {
+  # Count observations per species per location
+  valid_species <- data_set %>%
+    group_by(species_lump, latitude, longitude) %>%
+    summarise(total = sum(total_count), .groups = "drop") %>%
+    group_by(species_lump) %>%
+    summarise(n_sites = sum(total > 5), .groups = "drop") %>%
+    filter(n_sites >= 3) %>%
+    pull(species_lump)
+
+  # Loop through valid species
+  for (species in valid_species) {
+    message("Running model for: ", species)
+    try(single_species_model(species), silent = TRUE)
+  }
+}
+
 ```
 
 
 ```{r}
-# Subset outside of model
-
-# Run model
-ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
-                    alaria_subset2, 
-                    env_00_load, 
-                    Xcol = 'longitude', 
-                    Ycol = 'latitude', 
-                    verbose = FALSE)
-plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+all_species_rast(biodiv_2025)
 ```
-
-```{r}
-#abs_pres_model('Pisaster ochraceus')
-```
-
-
-
-# Scratch 
-
-```{r}
-alaria_pres_abs <- as.data.frame(alaria_pres_abs)
-```
-
-```{r}
-SDM_glm <- modelling('GLM', 
-                     alaria_obs_present, 
-                 env_00_load, 
-                 Xcol = 'longitude', 
-                 Ycol = 'latitude', 
-                 Pcol = 'occurrence', 
-                 verbose = FALSE)
-plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
-```
-
-
-
-
 
