@@ -26,34 +26,23 @@ source(here("scripts", "functions", "cumulative_density_graph.R"))
 
 ```{r}
 # Load data
-range_edges <- read_csv(here("data", "processed", "range_list.csv"))
-marine_path <- "/capstone/coastalconservation/data/processed/marine_site_segments.csv"
-marine_site_segments <- read_csv(marine_path)
+species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
+marine_path <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv")
+biodiv_df <- clean_biodiv()
 
-# Pull species with range edges in Dangermond
-
-# Looking 2 - 8, only northern range edges
-# eventually use fill list. and filter out within the function 
-northern_dangermond_range_edges <- range_edges %>%
-  filter(segment_id %in% (2:8)) %>% 
-  filter(range_edge_category == "Northern Range Edge") %>% 
-  # select(segment_name, segment_id, species_lump, total_counts, counts_in_buffer,
-  #        percent_years_present, sites_in_buffer, range_edge_category) %>% 
-  arrange(desc(segment_id)) %>%
-  mutate(percent_years_present = round(percent_years_present, digits=2))
+northern_dangermond_range_edges <- species_extent %>% 
+  filter(northern_extent_id %in% (2:8))
 
 northern_dangermond_species_list <- northern_dangermond_range_edges$species_lump %>% unique()
 ```
 
 
 ```{r}
-biodiv_df <- clean_biodiv('cbs_data_2025.xlsx',
-                              point_contact_sheet = 'point_contact_summary_layered',
-                              quadrat_sheet = 'quadrat_summary_data',
-                              swath_sheet = 'swath_summary_data') %>% 
+biodiv_distances <- biodiv_df %>% 
              left_join(
-              marine_site_segments %>%
-              select(latitude, segment_id, segment_name, coastline_km))
+              marine_path %>%
+              select(marine_site_name, coastline_km)
+              )
 ```
 
 ```{r}
@@ -63,15 +52,17 @@ northern_cum_den <- cum_den_df(biodiv_df) %>%
 ```
 
 ```{r}
-north_logit <- glm(cum_den_norm ~ latitude * year, binomial(link="logit"), northern_cum_den)
+north_logit <- glm(cum_den_norm ~ coastline_km * year_bin, binomial(link="logit"), northern_cum_den)
 ```
 
 ```{r}
-north_pred <- expand_grid(latitude = seq(32, 36, length.out=1000),
-                          year = 2000:2024) %>% 
-  mutate(
-    cum_den_norm = predict(north_logit, newdata = ., type="response")
-  ) 
+north_pred <- expand_grid(coastline_km = seq(64727.0844, 797950.6234, length.out = 1000),
+                          year_bin = northern_cum_den$year_bin %>% unique()
+                         ) %>% 
+    mutate(
+      cum_den_norm = predict(north_logit,
+                             newdata = ., type = "response")
+    ) 
 ```
 
 ```{r}
@@ -83,12 +74,12 @@ summary(north_logit)
 
 
 ```{r}
-ggplot(northern_cum_den, aes(x=latitude, y=cum_den_norm, color=year)) +
+ggplot(northern_cum_den, aes(x=coastline_km, y=cum_den_norm, color=year_bin)) +
  geom_point() +
-  geom_line(aes(group = year), data=north_pred) +
-  xlim(32, 36) +
+  geom_line(aes(group = year_bin), data=north_pred) +
+  xlim(64727.0844, 797950.6234) +
   geom_hline(yintercept=.95) +
-  labs(title = "Northern Range Edge Species Cumulative Density")
+  labs(title = "Northern Range Edge Species Cumulative Density") %>% View()
 ```
 
 Dangemond Lat -> 34.449
