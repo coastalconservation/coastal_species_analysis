@@ -53,6 +53,11 @@ northern_cum_den <- cum_den_df(biodiv_df) %>%
 
 ```{r}
 north_logit <- glm(cum_den_norm ~ coastline_km * year_bin, binomial(link="logit"), northern_cum_den)
+
+species_ecdf_logit <- glm(cum_den_norm ~ coastline_km * year_bin, 
+                      binomial(link = "logit"), 
+                      northern_cum_den)
+
 ```
 
 ```{r}
@@ -61,6 +66,8 @@ north_pred <- expand_grid(coastline_km = seq(64727.0844, 797950.6234, length.out
                          ) %>% 
     mutate(
       cum_den_norm = predict(north_logit,
+                             newdata = ., type = "response"),
+      cum_den_ecdf = predict(species_ecdf_logit,
                              newdata = ., type = "response")
     ) 
 ```
@@ -79,7 +86,7 @@ ggplot(northern_cum_den, aes(x=coastline_km, y=cum_den_norm, color=year_bin)) +
   geom_line(aes(group = year_bin), data=north_pred) +
   xlim(64727.0844, 797950.6234) +
   geom_hline(yintercept=.95) +
-  labs(title = "Northern Range Edge Species Cumulative Density") %>% View()
+  labs(title = "Northern Range Edge Species Cumulative Density")
 ```
 
 Dangemond Lat -> 34.449

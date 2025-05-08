@@ -48,7 +48,7 @@ Anova(north_logit)
 coef(north_logit)
 summary(north_logit)
 
-a <- ggplot(northern_cum_den, aes(x=coastline_km, y=cum_den_norm, color=year_bin)) +
+ggplot(northern_cum_den, aes(x=coastline_km, y=cum_den_norm, color=year_bin)) +
  geom_point() +
   geom_line(aes(group = year_bin), data=north_pred) +
   xlim(64727.0844, 797950.6234) +
