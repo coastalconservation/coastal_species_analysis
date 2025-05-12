@@ -28,9 +28,9 @@ clean_biodiv <- function(cbs_excel_name = 'cbs_data_2025.xlsx',
   # Clean point_contact dataset 
   point_contact_clean <- point_contact_raw %>% 
     # Remove non-matching columns 
-    # dplyr::select(-c('number_of_transect_locations', 'percent_cover')) %>% 
+     dplyr::select(-c('number_of_transect_locations', 'percent_cover')) %>% 
     # Rename num of hits to total count 
-    #dplyr::rename(total_count = number_of_hits) %>% 
+    dplyr::rename(total_count = number_of_hits) %>% 
     # Create new data collection source column 
     dplyr::mutate(collection_source = "point contact") %>% 
     dplyr::filter(island == "Mainland") %>% 

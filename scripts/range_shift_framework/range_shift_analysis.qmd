@@ -91,3 +91,85 @@ biodiv_df %>%
             max_lat = max(latitude)) %>% 
   View()
 ```
+
+# ECDF
+
+```{r}
+ggplot(northern_cum_den,
+       aes(x = latitude)) +
+  # Plot the Normalized CDF
+  geom_line(aes(y = cum_den_norm, color = "Normalized CDF"), size = 1) +
+  
+  # Plot the Empirical CDF (if available)
+  # geom_line(aes(y = ecdf_values, color = "Empirical CDF"), size = 1) +
+  
+  # Facet by 5-year bin
+  facet_wrap(~ year_bin, scales = "free_x") +
+  
+  # Labels and title
+  labs(
+    title = "Normalized vs Empirical CDF for Tegula aureotincta by 5-Year Bins",
+    x = "Latitude",
+    y = "Cumulative Probability",
+    color = "Distribution Type"
+  ) +
+  
+  # Custom color mapping
+  scale_color_manual(values = c("Normalized CDF" = "blue", "Empirical CDF" = "red")) +
+  
+  # Theme styling
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5)
+  )
+
+```
+
+## Matteo
+ˆ
+
+### Using density per meter squared
+```{r}
+# Northern Range Edge (2000-2024)
+biodiv_df %>%
+  filter(species_lump == "Tegula aureotincta",
+         latitude > 32.53 & latitude < 35.88) %>% # Northern Range Edge
+  ggplot(aes(x = density_per_m2)) +
+  stat_ecdf(geom = "step") +
+  labs(title = "Empirical Cumulative Distribution Function") +
+  theme_bw()
+
+# Every 5 years
+biodiv_df %>%
+  filter(species_lump == "Tegula aureotincta",
+         latitude > 32.53 & latitude < 35.88) %>% # Northern Range Edge
+  mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
+  ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
+  stat_ecdf(geom = "step") +
+  labs(title = "Empirical Cumulative Distribution Function",
+       color = "5 year period") +
+  theme_bw()
+
+# facet by year bin
+biodiv_df %>%
+  filter(species_lump == "Tegula aureotincta",
+         latitude > 32.53 & latitude < 35.88) %>% # Northern Range Edge
+  mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
+  ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
+  stat_ecdf(geom = "step") +
+  labs(title = "Empirical Cumulative Distribution Function",
+       color = "5 year period") +
+  facet_wrap(~year_bin) +
+  theme_bw()
+```
+
+### Using cumden norm
+```{r}
+northern_cum_den %>%
+  filter(species_lump == "Tegula aureotincta") %>%
+  ggplot(aes(x = cum_den_norm)) +
+  stat_ecdf(geom = "step", na.rm = TRUE) +
+  labs(title = "Empirical Cumulative Distribution Function") +
+  theme_bw()
+```
