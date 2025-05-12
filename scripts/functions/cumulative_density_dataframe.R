@@ -29,10 +29,14 @@
 #' @import dplyr
 #' @export
 cum_den_df <- function(bio_df){
+  processed_data_path <- "/capstone/coastalconservation/data/processed"
+  marine_site_path <- file.path(processed_data_path, "marine_site_segments.csv")
+  marine_site_segments <- read_csv(marine_site_path)
+  
   bio_df <- bio_df %>%
     left_join(
-      marine_path %>%
-        select(marine_site_name, coastline_km)
+      marine_site_segments %>%
+        select(marine_site_name, coastline_m)
     ) %>%
     filter(state_province=="California") %>%
     # Filter out point contact entries
@@ -44,14 +48,14 @@ cum_den_df <- function(bio_df){
     # Group by species and 5-year bin
     group_by(species_lump, year_bin) %>%
     # Arrange by coastline distance
-    arrange(coastline_km, .by_group = TRUE) %>%
+    arrange(coastline_m, .by_group = TRUE) %>%
     # Calculate cumulative and normalized density
     mutate(
       cum_den = cumsum(density_per_m2),
       cum_den_norm = cum_den / max(cum_den, na.rm = TRUE),
     ) %>%
     # Select relevant columns
-    select(cum_den, cum_den_norm, coastline_km, year,
+    select(cum_den, cum_den_norm, coastline_m, year,
            state_province, year_bin, species_lump)
   return(bio_df)
 

@@ -23,6 +23,7 @@ source(here("scripts", "functions", "cumulative_density_dataframe.R"))
 source(here("scripts", "functions", "range_extent_prediction.R"))
 source(here("scripts", "functions", "cumulative_density_graph.R"))
 
+biodiv_df <- clean_biodiv()
 ggsave("RopPou_cumulative.png", cumulative_den_graph("Roperia poulsoni"), bg="white")
 ```
 

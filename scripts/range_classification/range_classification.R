@@ -52,9 +52,9 @@ species_extent <- species_extent %>%
   left_join(
     marine_site_segments %>%
       select(marine_site_name, segment_id,
-             segment_name, coastline_km) %>%
+             segment_name, coastline_m) %>%
       rename(
-        southern_extent_km = coastline_km
+        southern_extent_m = coastline_m
       ),
     join_by(southern_site_name == marine_site_name)
   ) %>%
@@ -67,9 +67,9 @@ species_extent <- species_extent %>%
   left_join(
     marine_site_segments %>%
       select(marine_site_name, segment_id,
-             segment_name, coastline_km) %>%
+             segment_name, coastline_m) %>%
       rename(
-        northern_extent_km = coastline_km
+        northern_extent_m = coastline_m
       ),
     join_by(northern_site_name == marine_site_name)
   ) %>%
@@ -79,9 +79,9 @@ species_extent <- species_extent %>%
   ) %>%
   select(
     species_lump,
-    southern_extent_lat, southern_extent_km,
+    southern_extent_lat, southern_extent_m,
     southern_extent_id, southern_extent_name,
-    northern_extent_lat, northern_extent_km,
+    northern_extent_lat, northern_extent_m,
     northern_extent_id, northern_extent_name
   )
 

@@ -23,7 +23,7 @@ marine_sites <- biodiv_df %>%
   distinct(marine_site_name, latitude, longitude) %>%
   left_join(
     marine_site_distance %>%
-      select(marine_site_name, coastline_km = MEAS),
+      select(marine_site_name, coastline_m = MEAS),
     by = "marine_site_name"
   )
 

@@ -6,14 +6,14 @@ cumulative_den_graph <- function(species_name) {
 
   # Fit cumulative densities to logistic distribution
   species_norm_logit <- glm(
-    cum_den_norm ~ coastline_km * year_bin, 
+    cum_den_norm ~ coastline_m * year_bin, 
     family = quasibinomial(link = "logit"), 
     data = species_cum_den
   )
 
   # Generate prediction grid
   species_pred <- expand_grid(
-    coastline_km = seq(0, 1800000, length.out = 1000),
+    coastline_m = seq(0, 1800000, length.out = 1000),
     year_bin = unique(species_cum_den$year_bin)
   )
 
@@ -30,25 +30,26 @@ cumulative_den_graph <- function(species_name) {
     )
 
   # Create plot with confidence ribbons
-  extent_plot <- ggplot(species_pred, aes(x = coastline_km / 1000, 
-                                          y = cum_den_norm,
+  extent_plot <- ggplot(species_pred, aes(y = coastline_m / 1000, 
+                                          x = cum_den_norm,
                                           color = year_bin)) +
-    geom_ribbon(aes(ymin = lower,
-                    ymax = upper,
+    geom_ribbon(aes(xmin = lower,
+                    xmax = upper,
                     fill = year_bin),
                 alpha = 0.2, color = NA) +
     geom_line(linewidth = 1) +
     geom_point(data = species_cum_den %>%
                         filter(!is.na(cum_den_norm)),
-               aes(y = cum_den_norm), alpha = 0.6, size = 1.2) +
-    geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
-    geom_vline(xintercept = 520859.2599 / 1000, linetype = "dotted", color = "blue") +
+               aes(x = cum_den_norm), alpha = 0.6, size = 1.2) +
+    geom_vline(xintercept = 0.95, linetype = "dashed", color = "red") +
+    geom_vline(xintercept = 0.05, linetype = "dashed", color = "red") +
+    geom_hline(yintercept = 520859.2599 / 1000, linetype = "dotted", color = "blue") +
     scale_color_viridis_d(option = "B") +
     scale_fill_viridis_d(option = "B") +
     labs(
       title = paste(species_name, "- Cumulative Density"),
-      x = "Coastline Distance (km)",
-      y = "Normalized Cumulative Density",
+      y = "Coastline Distance (km)",
+      x = "Normalized Cumulative Density",
       color = "Year Bin",
       fill = "Year Bin"
     ) +
@@ -56,8 +57,8 @@ cumulative_den_graph <- function(species_name) {
     theme(
       legend.position = "bottom",
       plot.title = element_text(face = "bold")
-    ) + 
-    coord_fixed(ratio=1500)
+    ) #+
+    #coord_fixed(ratio=1500)
 
   return(extent_plot)
 }

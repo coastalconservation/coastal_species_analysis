@@ -17,6 +17,11 @@ what, where?
 who, what, analysis?
 
 ```{r}
+library(tidyverse)
+library(stringr)
+```
+
+```{r}
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
 ```
 
@@ -30,13 +35,23 @@ How many species have range edges in Dangemond?
 
 ```{r}
 processed_data_path <- "/capstone/coastalconservation/data/processed"
+marine_site_segments <- read_csv(file.path(processed_data_path, "marine_site_segments.csv"))
 species_extent_path <- file.path(processed_data_path, "species_extent.csv")
 species_extent <- read_csv(species_extent_path)
 ```
 
-```{r}
-library(stringr)
 
+```{r}
+marine_site_segments %>%
+  group_by(segment_name) %>%
+  summarise(
+    sites = n()
+  ) %>%
+  arrange(sites)
+```
+
+
+```{r}
 dangermond_edge_species <- species_extent %>% 
   filter(str_detect(southern_extent_name, "Dangermond") |
          str_detect(northern_extent_name, "Dangermond")
