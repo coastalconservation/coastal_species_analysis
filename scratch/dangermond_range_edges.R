@@ -2,11 +2,6 @@
 # Load packages 
 library(tidyverse)
 library(here)
-#library(spData)
-#library(sf)
-#library(tmap)
-#library(kableExtra)
-
 
 # Load data
 range_edges <- read_csv(here("data", "processed", "range_list.csv"))
