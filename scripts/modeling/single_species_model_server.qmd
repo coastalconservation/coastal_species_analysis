@@ -6,15 +6,36 @@ editor_options:
   chunk_output_type: console
 ---
 
-Notes: 
-Should probably make it so that it tells the user which models were used 
+clean_isles_biodiv
+
+### Make map that shows where all the species are increasing or decreasing, not on average, nut cummulatively, 
+
+Talk to Bruce about phrasing deliverable
+add reference map
+add toggle dots 
+Models for the two different decades?
+blue color for map might be hard for viewing bc of ocean 
+
+up and down arrow 
+
+Notes: Should probably make it so that it tells the user which models were used
 
 Current issues:
 
-Map is not always using the same scale so I am getting different rasters: Solved by using set.seed
-Inputing certain species into function is causing function to crash (Callianax biplicata, Spyridia filamentosa)
-Legend is not consistently 0-1, how do we nake the legend consistent and show the change?
+All code needs cleaned comments, functions need to be cleaned
 
+It seems like potentially, not all species use the same models, should we find a way to list them?
+
+## Code for species of interest from ian:
+
+
+
+dangermond_edge_species <- species_extent %>% 
+  filter(str_detect(southern_extent_name, "Dangermond") |
+         str_detect(northern_extent_name, "Dangermond")
+        )
+
+*Imputing certain species into function is causing r to crash (Callianax biplicata, Spyridia filamentosa, Encrusting coralline, Savoiea bipinnata/robusta)*
 
 ```{r}
 # Load packages
@@ -30,17 +51,30 @@ library(here)
 library(sf)
 library(tmap)
 library(maptiles)
+library(stringr)
 
 # Load functions 
-source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+source(here::here('scripts', 'functions', 'clean_isles_biodiv.R'))
 source(here::here('scripts', 'functions', 'single_species_model.R'))
+source(here::here('scripts', 'functions', 'tmap_habitat_change.R'))
+source(here::here('scripts', 'functions', 'auto_species_models.R'))
 ```
-
-I think to run multiple species we just have to subset before modeling
 
 ```{r}
-single_species_model('Pisaster ochraceus')
+# Create rasters and show plots
+single_species_model('Macron lividus')
 ```
+
+
+```{r}
+# Create interactive tmap to show change in habitat
+# This works for species: Current list of species for this function: Acanthinucella spp, Acmaea mitra, Acrosorium spp, Agathistoma eiseni, Hedophyllum sessile, Pisaster ochraceus, Littorina keenae, 'Fucus spp'
+
+tmap_habitat_change('Norrisia norrisii')
+```
+
+## Testing function
+
 
 
 ### Read in Raster Data
@@ -92,17 +126,115 @@ env_00_load <- stack(env_00_load)
 
 ### Read in Biodiv data
 
+       
 ```{r}
 # Read in biodiversity data 
-biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
+biodiv_2025 <- clean_isles_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
                               point_contact_sheet = 'point_contact_summary_layered',
                               quadrat_sheet = 'quadrat_summary_data',
                               swath_sheet = 'swath_summary_data')
 ```
 
-
 ```{r}
 unique(biodiv_2025$species_lump)
+```
+
+### Reading in species to run
+
+We got 30 species
+
+```{r}
+species_list <- c(
+  "Acanthinucella paucilirata",
+  "Acrosorium spp",
+  "Aplysia californica",
+  "Bugula neritina",
+  "Chondria arcuata",
+  "Chondria dasyphylla",
+  "Dictyota coriacea",
+  "Gastroclonium parvum",
+  "Haminoea vesicula",
+  "Jania rosea",
+  "Laurencia spp",
+  "Macron lividus",
+  "Nemalion elminthoides",
+  "Norrisia norrisii",
+  "Opalia wroblewskyi",
+  "Paraxanthias taylori",
+  "Pseudochama exogyra",
+  "Pseudomelatoma penicillata",
+  "Roperia poulsoni",
+  "Sargassum agardhianum",
+  "Taonia lennebackerae",
+  "Tegula aureotincta",
+  "Zonaria farlowii"
+)
+
+
+```
+
+```{r}
+filtered_data <- biodiv_2025 %>%
+  filter(species_lump %in% species_list)
+```
+
+
+```{r}
+filtered_data %>%
+  group_by(species_lump) %>%
+  summarise(total_species_count = sum(total_count, na.rm = TRUE)) %>%
+  filter(total_species_count < 10)
+
+```
+
+```{r}
+filtered_data %>%
+  filter(species_lump == "Acanthinucella paucilirata") %>%
+  summarise(total_individuals = sum(total_count, na.rm = TRUE))
+```
+
+```{r}
+auto_species_model(filtered_data)
+```
+
+## Testing multispecies function
+
+#### Test data 
+
+```{r}
+test_list <- c("canthinucella spp", "Acmaea mitra", "Acrosorium spp")
+```
+
+```{r}
+test_data <- biodiv_2025 %>%
+  filter(species_lump %in% test_list)
+```
+
+
+```{r}
+ species_list <- unique(biodiv_2025$species_lump)
+```
+
+```{r}
+test_auto_species_model <- function(biodiv_data) {
+  
+  species_list <- unique(biodiv_data$species_lump)
+  
+  for (species in species_list) {
+    message("Running model for: ", species)
+    tryCatch({
+      single_species_model(species)
+    }, error = function(e) {
+      message("Error for species: ", species)
+      message(e$message)
+    })
+  }
+}
+```
+
+
+```{r}
+test_auto_species_model(test_data)
 ```
 
 ### Modeling with Alaria marginata
@@ -112,20 +244,18 @@ unique(biodiv_2025$species_lump)
 ```{r}
 # Filter to alaria
 alaria_data <- biodiv_2025 %>% 
-  filter(species_lump == "Alaria marginata")
+  filter(species_lump == "Norrisia norrisii")
 ```
 
 ```{r}
 # Formatting observation data
 alaria_obs <- alaria_data |>
-  group_by(species_lump, latitude, longitude) |>
+  group_by(species_lump, latitude, longitude, island) |>
   summarise(num_count = sum(total_count)) |>
   ungroup()
 ```
 
 ### Creating binary occurence column
-
-There is an issue here using the `uncount()` function. Because we are now including absences, it does not know what to do with the zeros. A potential fix here is to create two data sets, one with just zeros and the other with the uncount() applied to the presence data and then stack them on top of each other. 
 
 ```{r}
 # Expand rows & keep observation column
@@ -134,12 +264,11 @@ alaria_pres_abs <- alaria_obs %>%
   dplyr::select(-num_count)
 ```
 
-
 ### Running SDMs, GLM AND GAM
 
 ##### Testing with subsetting outside of the model
 
-This is to test running models with both absence and presence data. To get models to run with presence and absence data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This argument tells the model where the presence/absence data should be found. 
+This is to test running models with both absence and presence data. To get models to run with presence and absence data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This argument tells the model where the presence/absence data should be found.
 
 It is still unknown why the dataset had to be turned into a dataframe, as it appears like it was always a dataframe.All the models appear to be working except the GAM
 
@@ -164,18 +293,6 @@ ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF',
                     Pcol = 'occurrence',
                     verbose = FALSE)
 
-```
-
-```{r}
-# Show popup about data
-#plot(ESDM)
-```
-
-```{r}
-# Show single graph and auc information
-#plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
-
-#knitr::kable(ESDM@evaluation)
 ```
 
 ### Function for modeling a single species with just presence data
@@ -206,9 +323,7 @@ plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 single_species_model2('Pisaster ochraceus')
 ```
 
-
-### Function for modeling with both presence and absence data where you can add env_load
-
+### Function for modeling with both presence and absence data
 
 ```{r}
 abs_pres_model <- function(species){
@@ -245,27 +360,24 @@ plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm
 
 knitr::kable(ESDM@evaluation)
 
-plot(ESDM)
+# plot(ESDM)
 }
 ```
 
 ```{r}
 abs_pres_model('Pisaster ochraceus')
 ```
-a
-```{r}
-abs_pres_model('Pisaster ochraceus', env_00_load)
-```
 
-Somehow, I am getting an error that one of the packages is using JAVA, but I am not sure which 
-
-### Past and pres
-
-SDM_projection <- project(SDM,Env_new)
-
+### Shows habitat projection 2050
 
 ```{r}
 future_model <- function(species){
+  
+  
+  species_clean <- gsub("/", "_", species)
+
+  biodiv_2025 <- biodiv_2025 %>%
+  mutate(species_lump_clean = gsub("/", "_", species_lump))
   
   species_data <- biodiv_2025 %>% 
   filter(species_lump == species)
@@ -301,33 +413,22 @@ plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " in 2050 with ESDM a
 
 knitr::kable(ESDM@evaluation)
 
-plot(ESDM_projection)
+# plot(ESDM_projection)
 }
 ```
 
-
-
 ```{r}
-future_model('Grateloupia californica')
+future_model('Cryptopleura/Hymenena spp')
 ```
-
-
-
-
-create function that provides a raster
-then create a function that provides a map
-
-Need to make it so it cleans the species name into one word instead of two or use a _
 
 To plot change over time:
 
-change_map <- ESDM_projection@projection - ESDM@projection
-plot(change_map, main = paste0("Change in suitability (2050 - now)\nfor ", species))
+change_map \<- ESDM_projection\@projection - ESDM\@projection plot(change_map, main = paste0("Change in suitability (2050 - now)\nfor ", species))
 
-
-# Aesthetics for tmap
+# Aesthetics for tmaps
 
 ```{r}
+# Load pisaster raster
 pisaster_tmap_rast <- rast(here("scripts", "modeling", "future_change_output_rasters", "ESDM_Pisaster_ochraceus_change.tif"))
 ```
 
@@ -342,8 +443,7 @@ tm_shape(pisaster_tmap_rast) +
   
 ```
 
-
-# TEST TMAP FUNCTION FOR CHANGE IN HABITAT
+# Change in habitat function
 
 making t-map that will show change in expected habitat
 
@@ -371,7 +471,6 @@ tmap_change_map <- function(species, save_plot = FALSE) {
   
   print(map)
 }
-
 
 ```
 
@@ -401,8 +500,69 @@ all_species_rast <- function(data_set) {
 
 ```
 
+# TEST
+# THE GBM MODEL IS WHAT IS CRASHING IT
+```{r}
+abs_pres_model <- function(species){
+  species_data <- biodiv_2025 %>% 
+    filter(species_lump == species)
+
+  species_obs <- species_data %>%
+    group_by(species_lump, latitude, longitude) %>%
+    summarise(num_count = sum(total_count), .groups = "drop")
+
+  species_pres_abs <- species_obs %>%
+    mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+    dplyr::select(-num_count)
+
+  species_subset <- as.data.frame(species_pres_abs)
+
+  if (nrow(species_subset) < 10 || length(unique(species_subset$occurrence)) < 2) {
+    message("❌ Skipping ", species, ": not enough data or class imbalance.")
+    return(NULL)
+  }
+# taking out 'GBM'
+  models <- c('GAM','GLM','MARS','CTA','MAXENT', 'ANN','RF','SVM')
+  models_list <- list()
+
+  for (mod in models) {
+    message("Fitting model: ", mod)
+    tryCatch({
+      model <- modelling(
+        mods,
+        species_subset,
+        env_00_load,
+        Xcol = 'longitude',
+        Ycol = 'latitude',
+        Pcol = 'occurrence',
+        verbose = FALSE
+      )
+      models_list[[mods]] <- model
+    }, error = function(e) {
+      message("Skipping ", mods, ": ", e$message)
+    })
+  }
+
+  if (length(models_list) == 0) {
+    message("No successful models for: ", species)
+    return(NULL)
+  }
+
+  ESDM <- ensemble_modelling(
+    models_list,
+    species_subset,
+    env_00_load,
+    Xcol = 'longitude',
+    Ycol = 'latitude',
+    Pcol = 'occurrence',
+    verbose = FALSE
+  )
+
+  plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm\n using"))
+} 
+```
 
 ```{r}
-all_species_rast(biodiv_2025)
+abs_pres_model('Pisaster ochraceus')
 ```
 
