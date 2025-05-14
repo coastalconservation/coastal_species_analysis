@@ -6,17 +6,25 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r}
+library(terra)
+test_rast <- rast(nrows = 10, ncols = 10)
+values(test_rast) <- runif(100)
+
+terra::writeRaster(
+  test_rast,
+  filename = "/capstone/coastalconservation/data/processed/species_model_rasters/change_species_rasters/test.tif",
+  overwrite = TRUE
+)
+```
+
 clean_isles_biodiv
 
-### Make map that shows where all the species are increasing or decreasing, not on average, nut cummulatively, 
+### Make map that shows where all the species are increasing or decreasing, not on average, nut cummulatively,
 
-Talk to Bruce about phrasing deliverable
-add reference map
-add toggle dots 
-Models for the two different decades?
-blue color for map might be hard for viewing bc of ocean 
+Talk to Bruce about phrasing deliverable add reference map add toggle dots Models for the two different decades? blue color for map might be hard for viewing bc of ocean
 
-up and down arrow 
+up and down arrow
 
 Notes: Should probably make it so that it tells the user which models were used
 
@@ -28,12 +36,7 @@ It seems like potentially, not all species use the same models, should we find a
 
 ## Code for species of interest from ian:
 
-
-
-dangermond_edge_species <- species_extent %>% 
-  filter(str_detect(southern_extent_name, "Dangermond") |
-         str_detect(northern_extent_name, "Dangermond")
-        )
+dangermond_edge_species \<- species_extent %\>% filter(str_detect(southern_extent_name, "Dangermond") \| str_detect(northern_extent_name, "Dangermond") )
 
 *Imputing certain species into function is causing r to crash (Callianax biplicata, Spyridia filamentosa, Encrusting coralline, Savoiea bipinnata/robusta)*
 
@@ -60,11 +63,124 @@ source(here::here('scripts', 'functions', 'tmap_habitat_change.R'))
 source(here::here('scripts', 'functions', 'auto_species_models.R'))
 ```
 
+The ones in bold are the ones that did not work
+
+### Northern range edge species
+
+**Acanthinucella paucilirata**
+
+*Acrosorium spp* 
+
+**Aplysia californica** Worked, but only without GBM 
+
+*Bugula neritina*
+
+*Chondria arcuata* 
+
+**Chondria dasyphylla** try without gbm
+
+*Dictyota coriacea*
+
+*Gastroclonium parvum* 
+
+**Haminoea vesicula** try without gbm
+
+*Jania rosea*
+
+*Laurencia spp*
+
+*Macron lividus*
+
+**Nemalion elminthoides**
+
+*Norrisia norrisii*
+
+Opalia wroblewskyi 
+
+**Paraxanthias taylori** 
+
+*Pseudochama exogyra* 
+
+**Pseudomelatoma penicillata** 
+
+*Roperia poulsoni*
+
+*Sargassum agardhianum* 
+
+**Taonia lennebackerae**
+
+*Tegula aureotincta* 
+
+*Zonaria farlowii*
+
+### Southern range edge species
+
+Acmaea mitra
+
+Aglaophenia spp
+
+Ahnfeltiopsis linearis
+
+Amphissa columbiana
+
+Analipus japonicus
+
+Calliostoma annulatum
+
+Calliostoma canaliculatum
+
+Calliostoma ligatum
+
+Chone minuta
+
+Cirolana spp/Gnorimosphaeroma oregonense
+
+Coryphella trilineata
+
+Cryptochiton stelleri
+
+Cryptosiphonia woodii
+
+Derbesia marina
+
+Desmarestia ligulata
+
+Dilsea californica
+
+Diodora aspera
+
+Fucus spp
+
+Halichondria spp
+
+Halosaccion glandiforme
+
+Halymenia/Schizymenia spp
+
+Haplogloia andersonii
+
+Henricia spp
+Laminaria setchellii
+Laminaria sinclairii
+Lottia asmi
+Neoptilota/Ptilota spp
+Neorhodomela larix
+Neorhodomela oregona
+Onchidella carpenteri
+Opalia wroblewskyi*
+Pelvetiopsis arborescens/limitata
+Semibalanus cariosus
+Spirobranchus spinosus
+Styela montereyensis
+Tegula brunnea
+Ulothrix spp
+
+
+
 ```{r}
 # Create rasters and show plots
-single_species_model('Macron lividus')
+single_species_model('Zonaria farlowii')
 ```
-
 
 ```{r}
 # Create interactive tmap to show change in habitat
@@ -74,8 +190,6 @@ tmap_habitat_change('Norrisia norrisii')
 ```
 
 ## Testing function
-
-
 
 ### Read in Raster Data
 
@@ -126,7 +240,6 @@ env_00_load <- stack(env_00_load)
 
 ### Read in Biodiv data
 
-       
 ```{r}
 # Read in biodiversity data 
 biodiv_2025 <- clean_isles_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
@@ -178,7 +291,6 @@ filtered_data <- biodiv_2025 %>%
   filter(species_lump %in% species_list)
 ```
 
-
 ```{r}
 filtered_data %>%
   group_by(species_lump) %>%
@@ -199,7 +311,7 @@ auto_species_model(filtered_data)
 
 ## Testing multispecies function
 
-#### Test data 
+#### Test data
 
 ```{r}
 test_list <- c("canthinucella spp", "Acmaea mitra", "Acrosorium spp")
@@ -209,7 +321,6 @@ test_list <- c("canthinucella spp", "Acmaea mitra", "Acrosorium spp")
 test_data <- biodiv_2025 %>%
   filter(species_lump %in% test_list)
 ```
-
 
 ```{r}
  species_list <- unique(biodiv_2025$species_lump)
@@ -231,7 +342,6 @@ test_auto_species_model <- function(biodiv_data) {
   }
 }
 ```
-
 
 ```{r}
 test_auto_species_model(test_data)
@@ -501,7 +611,9 @@ all_species_rast <- function(data_set) {
 ```
 
 # TEST
+
 # THE GBM MODEL IS WHAT IS CRASHING IT
+
 ```{r}
 abs_pres_model <- function(species){
   species_data <- biodiv_2025 %>% 
@@ -566,3 +678,60 @@ abs_pres_model <- function(species){
 abs_pres_model('Pisaster ochraceus')
 ```
 
+```{r}
+# Alternative approach - focus on region with data and use simpler background
+library(terra)
+library(tmap)
+
+# Species name
+species <- "Macron lividus"
+
+# Path to habitat change raster
+change_path <- file.path(
+  "/capstone/coastalconservation/data/processed/species_model_rasters/change_species_rasters",
+  paste0("ESDM_", gsub(" ", "_", species), "_change.tif")
+)
+
+# Load change raster
+change_rast <- rast(change_path)
+
+# Switch to plot mode for static map
+tmap_mode("plot")
+
+# Create color palette with white as the midpoint
+col_pal <- colorRampPalette(c("#9970AB", "#F1F1F1", "#BF812D"))(9)
+
+# Create a simpler map just using the raster
+map <- tm_shape(change_rast) +
+  tm_raster(midpoint = 0,
+            breaks = seq(-1, 1, by = 0.2),
+            palette = col_pal,
+            title = "Change in Habitat Suitability") +
+  tm_layout(
+    main.title = paste0("Change in Habitat Suitability (2050)\n", species),
+    main.title.position = "center",
+    main.title.size = 1.2,
+    main.title.fontface = "bold",
+    frame = TRUE,
+    legend.outside = TRUE,
+    legend.outside.position = "right",
+    legend.format = list(digits = 2)
+  ) +
+  tm_compass() +
+  tm_scale_bar()
+
+# Display the map
+map
+
+# Display the map
+map
+# Save the plot as PNG
+# tmap_save(
+#   tm = map,
+#   filename = here("outputs", paste0("change_map_", gsub(" ", "_", species), ".png")),
+#   width = 8,
+#   height = 6,
+#   units = "in",
+#   dpi = 300
+# )
+```
