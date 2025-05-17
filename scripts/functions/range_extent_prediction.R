@@ -42,54 +42,68 @@
 #' \code{\link{cumulative_den_graph}} for related visualization of the full density curves
 #'
 #' @export
-range_extent_graph <- function(species_name){
+range_extent_df <- function(species_name){
   
   # Get the cumulative density data for the specified species
   species_cum_den <- cum_den_df(biodiv_df) %>% 
     filter(species_lump == species_name)
   
   # Fit logistic regression model to predict cumulative density from latitude and year
-  species_logit <- glm(cum_den_norm ~ coastline_km * year, binomial(link="logit"), species_cum_den)
+  species_norm_logit <- glm(
+    cum_den_norm ~ coastline_m * year, 
+    family = quasibinomial(link = "logit"), 
+    data = species_cum_den
+  )
   
   # Generate predictions across a grid of latitudes and years
-  species_pred <- expand_grid( # find appropriate distance
-                              latitude = seq(32, 36, length.out=1000),
-                              # distance = seq(32, 36, length.out=1000),
-                              year = 2000:2024) %>% 
+  species_pred <- expand_grid(
+    coastline_m = seq(0, 1800000, length.out = 1000),
+    year = unique(species_cum_den$year)) %>%
     mutate(
-      cum_den_norm = predict(species_logit, newdata = ., type="response")
-    ) 
+      cum_den_norm = predict(
+        species_norm_logit,
+        newdata = .,
+        type = "response"
+        )
+    )
   
   # Calculate the 5th and 95th percentile latitudes for each year
   species_extent_df <- species_pred %>% 
     group_by(year) %>% 
     summarise(
       # Northern edge (95th percentile)
-      max_lat = approx(cum_den_norm, coastline_km, xout=0.95)$y, 
+      max_lat = approx(cum_den_norm, coastline_m, xout = 0.90)$y,
       # Southern edge (5th percentile)
-      min_lat = approx(cum_den_norm, coastline_km, xout=0.05)$y  
+      min_lat = approx(cum_den_norm, coastline_m, xout = 0.10)$y
+    ) %>% 
+    mutate(
+      species_name = species_name
     )
-  
 
-  # Approximate northern range (95th percentile) and southern range (5th percentile) by year
-  species_extent_df <- species_pred %>%
-    group_by(year_bin) %>%
-    summarise(
-      max_dist_norm = approx(cum_den_norm, coastline_km, xout = 0.95)$y,
-      min_dist_norm = approx(cum_den_norm, coastline_km, xout = 0.05)$y,
-      max_dist_ecdf = approx(cum_den_ecdf, coastline_km, xout = 0.95)$y,
-      min_dist_ecdf = approx(cum_den_ecdf, coastline_km, xout = 0.05)$y
+  return(species_extent_df)
+}
+
+range_extent_plot <- function(species_extent_df) {
+  ggplot(species_extent_df, aes(x = year)) +
+    # Northern boundary (e.g., 95th percentile)
+    geom_point(aes(y = max_lat), color = "#D73027", size = 2, alpha = 0.8) +
+    # Southern boundary (e.g., 5th percentile)
+    geom_point(aes(y = min_lat), color = "#4575B4", size = 2, alpha = 0.8) +
+    # Point Conception latitude line (replace 520859.2599 with actual latitude if available)
+    geom_hline(yintercept = 520859.2599, linetype = "dashed", color = "darkgray") +
+    annotate("text", x = min(species_extent_df$year), y = 440820 + 0.5,
+             label = "Point Conception", hjust = 0, color = "darkgray", size = 3.5) +
+    labs(
+      title = paste("5th and 95th Percentile Range of", species_extent_df$species_name[1]),
+      x = "Year",
+      y = "Coastline Distance",
+      caption = "Red: Northern boundary (95th percentile), Blue: Southern boundary (5th percentile)"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold", size = 14),
+      plot.caption = element_text(size = 10, color = "gray30"),
+      axis.title = element_text(size = 12),
+      panel.grid.minor = element_blank()
     )
-    
-  # Create plot showing the range boundaries over time
-  extent_plot <- ggplot(species_extent_df) +
-    # Northern boundary in red
-    geom_point(aes(year, max_lat), color="red") +     
-    # Southern boundary in blue
-    geom_point(aes(year, min_lat), color="blue") +    
-    # Point Conception latitude line
-    geom_hline(yintercept = 34.449) +                 
-    labs(title= paste("5th and 95th Percentile Range: ", species_name))
-  
-  return(extent_plot)
 }

@@ -45,6 +45,7 @@ cum_den_df <- function(bio_df){
     mutate(year_bin = paste0(floor(year / 5) * 5,
                              "-",
                              floor(year / 5) * 5 + 4)) %>%
+    mutate(year_bin = as.factor(year_bin)) %>%
     # Group by species and 5-year bin
     group_by(species_lump, year_bin) %>%
     # Arrange by coastline distance

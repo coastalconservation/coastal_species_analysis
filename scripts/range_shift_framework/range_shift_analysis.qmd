@@ -22,9 +22,6 @@ source(here("scripts", "functions", "clean_biodiv.R"))
 source(here("scripts", "functions", "cumulative_density_dataframe.R"))
 source(here("scripts", "functions", "range_extent_prediction.R"))
 source(here("scripts", "functions", "cumulative_density_graph.R"))
-
-biodiv_df <- clean_biodiv()
-ggsave("RopPou_cumulative.png", cumulative_den_graph("Roperia poulsoni"), bg="white")
 ```
 
 ```{r}
@@ -32,33 +29,6 @@ ggsave("RopPou_cumulative.png", cumulative_den_graph("Roperia poulsoni"), bg="wh
 species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
 marine_path <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv")
 biodiv_df <- clean_biodiv()
-
-northern_dangermond_range_edges <- species_extent %>% 
-  filter(northern_extent_id %in% (2:8))
-
-northern_dangermond_species_list <- northern_dangermond_range_edges$species_lump %>% unique()
-```
-
-
-```{r}
-biodiv_distances <- biodiv_df %>% 
-             left_join(
-              marine_path %>%
-              select(marine_site_name, coastline_km)
-              )
-```
-
-```{r}
-northern_cum_den <- cum_den_df(biodiv_df) %>% 
-  filter(species_lump %in% northern_dangermond_species_list) %>% 
-  filter(state_province=="California")
-```
-
-
-```{r}
-cum_den_df(biodiv_df) %>%
-  group_by(state_province) %>%
-  slice_max(order_by = coastline_km, n = 1, with_ties = FALSE)
 ```
 
 ## Macron lividus
@@ -70,10 +40,14 @@ max((biodiv_df %>%
 
 # Roperia poulsoni has Northern Range edge in Southern Dangermond
 
-ggsave("RopPou_cumulative.png", cumulative_den_graph("Roperia poulsoni"), bg="white")
-range_extent_graph("Macron lividus")
+ggsave("HamVes_cumulative.png", cumulative_den_graph("Macron lividus"), bg="white")
+ggsave("HamVes_range.png", range_extent_plot(range_extent_df("Macron lividus")), bg="white")
 ```
 
+
+```{r}
+range_extent_plot(range_extent_df("Macron lividus"))
+```
 ```{r}
 ggplot(biodiv_df %>% filter(species_lump=="Roperia poulsoni"),
        aes(x=year, y=latitude, aes=density_per_m2)) +
@@ -172,4 +146,10 @@ northern_cum_den %>%
   stat_ecdf(geom = "step", na.rm = TRUE) +
   labs(title = "Empirical Cumulative Distribution Function") +
   theme_bw()
+```
+
+
+```{r}
+roperia_range <- range_extent_df("Roperia poulsoni")
+range_extent_plot(roperia_range)
 ```
