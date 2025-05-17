@@ -2,7 +2,31 @@
 title: "loading data from server"
 format: html
 editor: visual
+editor_options: 
+  chunk_output_type: console
 ---
+
+clean_isles_biodiv
+
+### Make map that shows where all the species are increasing or decreasing, not on average, nut cummulatively,
+
+Talk to Bruce about phrasing deliverable add reference map add toggle dots Models for the two different decades? blue color for map might be hard for viewing bc of ocean
+
+up and down arrow
+
+Notes: Should probably make it so that it tells the user which models were used
+
+Current issues:
+
+All code needs cleaned comments, functions need to be cleaned
+
+It seems like potentially, not all species use the same models, should we find a way to list them?
+
+## Code for species of interest from ian:
+
+dangermond_edge_species \<- species_extent %\>% filter(str_detect(southern_extent_name, "Dangermond") \| str_detect(northern_extent_name, "Dangermond") )
+
+*Imputing certain species into function is causing r to crash (Callianax biplicata, Spyridia filamentosa, Encrusting coralline, Savoiea bipinnata/robusta)*
 
 ```{r}
 # Load packages
@@ -16,13 +40,166 @@ library(purrr)
 library(shinyFiles) # For ssdm shiny interface
 library(here)
 library(sf)
+library(tmap)
+library(maptiles)
+library(stringr)
 
 # Load functions 
-source(here::here('scripts', 'functions', 'clean_biodiv.R'))
-source(here::here('scripts', 'functions', 'model_sing_species.R'))
+source(here::here('scripts', 'functions', 'clean_isles_biodiv.R'))
+source(here::here('scripts', 'functions', 'single_species_model.R'))
+source(here::here('scripts', 'functions', 'tmap_habitat_change.R'))
+source(here::here('scripts', 'functions', 'auto_species_models.R'))
+#source(here::here('scripts', 'functions', 'GAM_function.R'))
 ```
 
-I think to run multiple species we just have to subset before modeling
+The ones in bold are the ones that did not work
+
+### Northern range edge species
+
+**Acanthinucella paucilirata**
+
+*Acrosorium spp*
+
+*Aplysia californica* only worked without GBM
+
+*Bugula neritina*
+
+*Chondria arcuata*
+
+*Chondria dasyphylla* only worked without gbm
+
+*Dictyota coriacea*
+
+*Gastroclonium parvum*
+
+*Haminoea vesicula* only worked without GBM
+
+*Jania rosea*
+
+*Laurencia spp*
+
+*Macron lividus*
+
+*Nemalion elminthoides* only worked without gbm
+
+*Norrisia norrisii*
+
+**Opalia wroblewskyi** Complete fail, probably not enough data
+
+*Paraxanthias taylori* only worked without gbm
+
+*Pseudochama exogyra*
+
+**Pseudomelatoma penicillata** Complete fail, probably not enough data
+
+*Roperia poulsoni*
+
+*Sargassum agardhianum*
+
+*Taonia lennebackerae* only worked without gbm
+
+*Tegula aureotincta*
+
+*Zonaria farlowii*
+
+### Southern range edge species
+
+*Acmaea mitra*
+
+**Aglaophenia spp** Complete fail
+
+*Ahnfeltiopsis linearis*  only worked without gbm
+
+*Amphissa columbiana*
+
+*Analipus japonicus*
+
+**Calliostoma annulatum** Complete fail not enough data
+
+*Calliostoma canaliculatum* only worked without gbm
+
+*Calliostoma ligatum*
+
+*Chone minuta* only worked without gbm
+
+**Cirolana spp/Gnorimosphaeroma oregonense** had file naming issue
+
+**Coryphella trilineata** Complete fail
+
+*Cryptochiton stelleri*
+
+*Cryptosiphonia woodii*
+
+**Derbesia marina**
+
+*Desmarestia ligulata*
+
+*Dilsea californica*
+
+**Diodora aspera**
+
+*Fucus spp*
+
+*Halichondria spp*
+
+*Halosaccion glandiforme* - had fewer warnings than most species
+
+**Halymenia/Schizymenia spp** Naming issue
+
+*Haplogloia andersonii* only worked without gbm
+
+*Henricia spp*
+
+*Laminaria setchellii*
+
+*Laminaria sinclairii*
+
+*Lottia asmi* Less warning than others
+
+**Neoptilota/Ptilota spp** naming issue
+
+*Neorhodomela larix* less errors than usuals
+
+*Neorhodomela oregona*
+
+*Onchidella carpenteri* "In cor(predicted.values, o.predicted.values) : the standard deviation is zero"
+
+Opalia wroblewskyi\*
+
+**Pelvetiopsis arborescens/limitata** naming issue
+
+*Semibalanus cariosus*
+
+*Spirobranchus spinosus*
+
+**Styela montereyensis** looked like sd issues... crashed before i could read it
+
+*Tegula brunnea* Warning message: In cor(predicted.values, o.predicted.values) : the standard deviation is zero
+
+**Ulothrix spp**
+
+    # model tabItem ----
+    tabItem(tabName = "model"), # END model tabItem
+
+    # assessment tabItem ----
+    tabItem(tabName = "assessment"), # END assessment tabItem
+
+    # data tabItem ----
+    tabItem(tabName = "data") # END data tabItem
+
+```{r}
+# Create rasters and show plots
+single_species_model('Amphissa columbiana')
+```
+
+```{r}
+# Create interactive tmap to show change in habitat
+# This works for species: Current list of species for this function: Acanthinucella spp, Acmaea mitra, Acrosorium spp, Agathistoma eiseni, Hedophyllum sessile, Pisaster ochraceus, Littorina keenae, 'Fucus spp'
+
+tmap_habitat_change('Analipus japonicus')
+```
+
+## Testing function
 
 ### Read in Raster Data
 
@@ -75,10 +252,109 @@ env_00_load <- stack(env_00_load)
 
 ```{r}
 # Read in biodiversity data 
-biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
+biodiv_2025 <- clean_isles_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
                               point_contact_sheet = 'point_contact_summary_layered',
                               quadrat_sheet = 'quadrat_summary_data',
                               swath_sheet = 'swath_summary_data')
+```
+
+```{r}
+unique(biodiv_2025$species_lump)
+```
+
+### Reading in species to run
+
+We got 30 species
+
+```{r}
+species_list <- c(
+  "Acanthinucella paucilirata",
+  "Acrosorium spp",
+  "Aplysia californica",
+  "Bugula neritina",
+  "Chondria arcuata",
+  "Chondria dasyphylla",
+  "Dictyota coriacea",
+  "Gastroclonium parvum",
+  "Haminoea vesicula",
+  "Jania rosea",
+  "Laurencia spp",
+  "Macron lividus",
+  "Nemalion elminthoides",
+  "Norrisia norrisii",
+  "Opalia wroblewskyi",
+  "Paraxanthias taylori",
+  "Pseudochama exogyra",
+  "Pseudomelatoma penicillata",
+  "Roperia poulsoni",
+  "Sargassum agardhianum",
+  "Taonia lennebackerae",
+  "Tegula aureotincta",
+  "Zonaria farlowii"
+)
+
+
+```
+
+```{r}
+filtered_data <- biodiv_2025 %>%
+  filter(species_lump %in% species_list)
+```
+
+```{r}
+filtered_data %>%
+  group_by(species_lump) %>%
+  summarise(total_species_count = sum(total_count, na.rm = TRUE)) %>%
+  filter(total_species_count < 10)
+
+```
+
+```{r}
+filtered_data %>%
+  filter(species_lump == "Acanthinucella paucilirata") %>%
+  summarise(total_individuals = sum(total_count, na.rm = TRUE))
+```
+
+```{r}
+auto_species_model(filtered_data)
+```
+
+## Testing multispecies function
+
+#### Test data
+
+```{r}
+test_list <- c("canthinucella spp", "Acmaea mitra", "Acrosorium spp")
+```
+
+```{r}
+test_data <- biodiv_2025 %>%
+  filter(species_lump %in% test_list)
+```
+
+```{r}
+ species_list <- unique(biodiv_2025$species_lump)
+```
+
+```{r}
+test_auto_species_model <- function(biodiv_data) {
+  
+  species_list <- unique(biodiv_data$species_lump)
+  
+  for (species in species_list) {
+    message("Running model for: ", species)
+    tryCatch({
+      single_species_model(species)
+    }, error = function(e) {
+      message("Error for species: ", species)
+      message(e$message)
+    })
+  }
+}
+```
+
+```{r}
+test_auto_species_model(test_data)
 ```
 
 ### Modeling with Alaria marginata
@@ -88,20 +364,18 @@ biodiv_2025 <- clean_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx',
 ```{r}
 # Filter to alaria
 alaria_data <- biodiv_2025 %>% 
-  filter(species_lump == "Alaria marginata")
+  filter(species_lump == "Norrisia norrisii")
 ```
 
 ```{r}
 # Formatting observation data
 alaria_obs <- alaria_data |>
-  group_by(species_lump, latitude, longitude) |>
+  group_by(species_lump, latitude, longitude, island) |>
   summarise(num_count = sum(total_count)) |>
   ungroup()
 ```
 
 ### Creating binary occurence column
-
-There is an issue here using the `uncount()` function. Because we are now including absences, it does not know what to do with the zeros. A potential fix here is to create two data sets, one with just zeros and the other with the uncount() applied to the presence data and then stack them on top of each other. 
 
 ```{r}
 # Expand rows & keep observation column
@@ -110,12 +384,11 @@ alaria_pres_abs <- alaria_obs %>%
   dplyr::select(-num_count)
 ```
 
-
 ### Running SDMs, GLM AND GAM
 
 ##### Testing with subsetting outside of the model
 
-This is to test running models with both absence and presence data. To get models to run with presence and absence data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This argument tells the model where the presence/absence data should be found. 
+This is to test running models with both absence and presence data. To get models to run with presence and absence data (not just presence data) I subsetted the data to the species of interest outside of the model function and ensured it was a data frame before running the model. I also added a *pcol* argument to the model. This argument tells the model where the presence/absence data should be found.
 
 It is still unknown why the dataset had to be turned into a dataframe, as it appears like it was always a dataframe.All the models appear to be working except the GAM
 
@@ -142,22 +415,10 @@ ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF',
 
 ```
 
-```{r}
-# Show popup about data
-#plot(ESDM)
-```
-
-```{r}
-# Show single graph and auc information
-#plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
-
-#knitr::kable(ESDM@evaluation)
-```
-
 ### Function for modeling a single species with just presence data
 
 ```{r}
-single_species_model <- function(species){
+single_species_model2 <- function(species){
   
   species_data <- biodiv_2025 %>% 
   filter(species_lump == species)
@@ -179,12 +440,10 @@ plot(SDM_glm@projection, main = 'SDM\nfor species\nwith GLM algorithm')
 ```
 
 ```{r}
-single_species_model('Pisaster ochraceus')
+single_species_model2('Pisaster ochraceus')
 ```
 
-
-### Function for modeling with both presence and absence data where you can add env_load
-
+### Function for modeling with both presence and absence data
 
 ```{r}
 abs_pres_model <- function(species){
@@ -221,27 +480,24 @@ plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm
 
 knitr::kable(ESDM@evaluation)
 
-plot(ESDM)
+# plot(ESDM)
 }
 ```
 
 ```{r}
-abs_pres_model('Gloiopeltis furcata')
-```
-a
-```{r}
-abs_pres_model('Pisaster ochraceus', env_00_load)
+abs_pres_model('Pisaster ochraceus')
 ```
 
-Somehow, I am getting an error that one of the packages is using JAVA, but I am not sure which 
-
-### Past and pres
-
-SDM_projection <- project(SDM,Env_new)
-
+### Shows habitat projection 2050
 
 ```{r}
 future_model <- function(species){
+  
+  
+  species_clean <- gsub("/", "_", species)
+
+  biodiv_2025 <- biodiv_2025 %>%
+  mutate(species_lump_clean = gsub("/", "_", species_lump))
   
   species_data <- biodiv_2025 %>% 
   filter(species_lump == species)
@@ -273,80 +529,219 @@ future_model <- function(species){
 
   ESDM_projection <- SSDM::project(ESDM, env_50_load)
 
-plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm"))
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " in 2050 with ESDM algorithm"))
 
 knitr::kable(ESDM@evaluation)
 
-plot(ESDM_projection)
+# plot(ESDM_projection)
 }
 ```
 
-
-
 ```{r}
-future_model('Gloiopeltis furcata')
+future_model('Cryptopleura/Hymenena spp')
 ```
 
+To plot change over time:
 
-### Comparing to Presence only models:
+change_map \<- ESDM_projection\@projection - ESDM\@projection plot(change_map, main = paste0("Change in suitability (2050 - now)\nfor ", species))
 
-In order to ensure the difference in results is comming from adding in the presence and absence data, I still need to run the models without subseting outside of the function.
+# Aesthetics for tmaps
 
 ```{r}
-# Create column with only presence
-alaria_obs_present <- alaria_obs |>
-  filter(num_count >=1 ) |>
-  uncount(num_count) 
+# Load pisaster raster
+pisaster_tmap_rast <- rast(here("scripts", "modeling", "future_change_output_rasters", "ESDM_Pisaster_ochraceus_change.tif"))
 ```
 
 ```{r}
-# Subset the data to the species of interest
-alaria_subset2 <- subset(alaria_obs_present, species_lump == 'Alaria marginata')
+tmap_mode("view")
+
+tm_shape(pisaster_tmap_rast) +
+  tm_raster(midpoint = 0,
+            breaks = seq(-1, 1, by = 0.2)) +
+  # either esri ocean or a more plane one 
+  tm_basemap("Esri.OceanBasemap")
+  
+```
+
+# Change in habitat function
+
+making t-map that will show change in expected habitat
+
+```{r}
+tmap_change_map <- function(species, save_plot = FALSE) {
+  # Define file path for the change raster
+  change_path <- here::here("scripts", "modeling", "future_change_output_rasters", 
+                            paste0("ESDM_", gsub(" ", "_", species), "_change.tif"))
+
+  # Load the change raster
+  change_rast <- rast(change_path)
+
+  # Create tmap
+  tmap_mode("view")
+  
+  map <- tm_shape(pisaster_tmap_rast) +
+  tm_raster(midpoint = 0,
+            breaks = seq(-1, 1, by = 0.2)) +
+  # either esri ocean or a more plane one 
+  tm_basemap("Esri.OceanBasemap") +
+  tm_layout(
+    main.title = paste0("Change in Suitability (2050 - Now)\n", species),
+    legend.outside = TRUE
+    )
+  
+  print(map)
+}
+
 ```
 
 ```{r}
-# Turn alaria_subset2 into data.frame
-alaria_subset2 <- as.data.frame(alaria_subset2)
+tmap_change_map('Pisaster ochraceus')
 ```
 
+# Function for getting the rasters for every species
 
 ```{r}
-# Subset outside of model
+all_species_rast <- function(data_set) {
+  # Count observations per species per location
+  valid_species <- data_set %>%
+    group_by(species_lump, latitude, longitude) %>%
+    summarise(total = sum(total_count), .groups = "drop") %>%
+    group_by(species_lump) %>%
+    summarise(n_sites = sum(total > 5), .groups = "drop") %>%
+    filter(n_sites >= 3) %>%
+    pull(species_lump)
 
-# Run model
-ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
-                    alaria_subset2, 
-                    env_00_load, 
-                    Xcol = 'longitude', 
-                    Ycol = 'latitude', 
-                    verbose = FALSE)
-plot(ESDM@projection, main = 'ESDM\nfor Alaria marginata\nwith GAM and GLM algorithms')
+  # Loop through valid species
+  for (species in valid_species) {
+    message("Running model for: ", species)
+    try(single_species_model(species), silent = TRUE)
+  }
+}
+
+```
+
+# TEST
+
+# THE GBM MODEL IS WHAT IS CRASHING IT
+
+```{r}
+abs_pres_model <- function(species){
+  species_data <- biodiv_2025 %>% 
+    filter(species_lump == species)
+
+  species_obs <- species_data %>%
+    group_by(species_lump, latitude, longitude) %>%
+    summarise(num_count = sum(total_count), .groups = "drop")
+
+  species_pres_abs <- species_obs %>%
+    mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+    dplyr::select(-num_count)
+
+  species_subset <- as.data.frame(species_pres_abs)
+
+  if (nrow(species_subset) < 10 || length(unique(species_subset$occurrence)) < 2) {
+    message("❌ Skipping ", species, ": not enough data or class imbalance.")
+    return(NULL)
+  }
+# taking out 'GBM'
+  models <- c('GAM','GLM','MARS','CTA','MAXENT', 'ANN','RF','SVM')
+  models_list <- list()
+
+  for (mod in models) {
+    message("Fitting model: ", mod)
+    tryCatch({
+      model <- modelling(
+        mods,
+        species_subset,
+        env_00_load,
+        Xcol = 'longitude',
+        Ycol = 'latitude',
+        Pcol = 'occurrence',
+        verbose = FALSE
+      )
+      models_list[[mods]] <- model
+    }, error = function(e) {
+      message("Skipping ", mods, ": ", e$message)
+    })
+  }
+
+  if (length(models_list) == 0) {
+    message("No successful models for: ", species)
+    return(NULL)
+  }
+
+  ESDM <- ensemble_modelling(
+    models_list,
+    species_subset,
+    env_00_load,
+    Xcol = 'longitude',
+    Ycol = 'latitude',
+    Pcol = 'occurrence',
+    verbose = FALSE
+  )
+
+  plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm\n using"))
+} 
 ```
 
 ```{r}
-#abs_pres_model('Pisaster ochraceus')
-```
-
-
-
-# Scratch 
-
-```{r}
-alaria_pres_abs <- as.data.frame(alaria_pres_abs)
+abs_pres_model('Pisaster ochraceus')
 ```
 
 ```{r}
-SDM_glm <- modelling('GLM', 
-                     alaria_obs_present, 
-                 env_00_load, 
-                 Xcol = 'longitude', 
-                 Ycol = 'latitude', 
-                 Pcol = 'occurrence', 
-                 verbose = FALSE)
-plot(SDM_glm@projection, main = 'SDM\nfor Alaria marginata\nwith GLM algorithm')
+# Alternative approach - focus on region with data and use simpler background
+library(terra)
+library(tmap)
+
+# Species name
+species <- "Macron lividus"
+
+# Path to habitat change raster
+change_path <- file.path(
+  "/capstone/coastalconservation/data/processed/species_model_rasters/change_species_rasters",
+  paste0("ESDM_", gsub(" ", "_", species), "_change.tif")
+)
+
+# Load change raster
+change_rast <- rast(change_path)
+
+# Switch to plot mode for static map
+tmap_mode("plot")
+
+# Create color palette with white as the midpoint
+col_pal <- colorRampPalette(c("#9970AB", "#F1F1F1", "#BF812D"))(9)
+
+# Create a simpler map just using the raster
+map <- tm_shape(change_rast) +
+  tm_raster(midpoint = 0,
+            breaks = seq(-1, 1, by = 0.2),
+            palette = col_pal,
+            title = "Change in Habitat Suitability") +
+  tm_layout(
+    main.title = paste0("Change in Habitat Suitability (2050)\n", species),
+    main.title.position = "center",
+    main.title.size = 1.2,
+    main.title.fontface = "bold",
+    frame = TRUE,
+    legend.outside = TRUE,
+    legend.outside.position = "right",
+    legend.format = list(digits = 2)
+  ) +
+  tm_compass() +
+  tm_scale_bar()
+
+# Display the map
+map
+
+# Display the map
+map
+# Save the plot as PNG
+# tmap_save(
+#   tm = map,
+#   filename = here("outputs", paste0("change_map_", gsub(" ", "_", species), ".png")),
+#   width = 8,
+#   height = 6,
+#   units = "in",
+#   dpi = 300
+# )
 ```
-
-
-
-
-
