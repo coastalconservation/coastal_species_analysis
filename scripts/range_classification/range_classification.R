@@ -62,7 +62,6 @@ species_extent <- species_extent %>%
     southern_extent_id = segment_id,
     southern_extent_name = segment_name
   ) %>%
-
   # Second join on northern_extent_lat (northern)
   left_join(
     marine_site_segments %>%

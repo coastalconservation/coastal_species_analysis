@@ -151,7 +151,7 @@ biodiv_df <- clean_biodiv()
 
 ### Join the two datasets
 
-We first extract only the marine sites and their locations from the biodiversity dataset. Then we can join using the marine_site_distance dataframe on their name. We also add the coastline_m variable. This variable tells us how far on the coastline (in m) we are form the southern California border.
+We first extract only the marine sites and their locations from the biodiversity dataset. Then we can join using the marine_site_distance dataframe on their name. We also add the coastline_m variable. This variable tells us how far on the coastline (in m) we are from the southern California border.
 
 ```{r}
 # Filter and join MARINe sites with coastline distance
@@ -165,6 +165,8 @@ marine_sites <- biodiv_df %>%
 ```
 
 ### Classify marine sites to CA segment
+
+We then create a function to assign a segment_id to a marine site. We can apply this to each marine site to create a table of all the marine sites and their segment IDs.
 
 ```{r}
 # Define helper function to assign segment_id based on site latitude
@@ -187,6 +189,10 @@ marine_sites <- marine_sites %>%
   ungroup()
 ```
 
+### Label Site IDs
+
+Next, we join the original segment dataframe to label each segment id and view it.
+
 ```{r}
 # Join segment names
 marine_sites <- marine_sites %>%
@@ -197,13 +203,23 @@ marine_sites <- marine_sites %>%
 
 # View sites
 marine_sites %>% View()
+```
 
+### Write to CSV
+
+Finally, we can write the data frame to the proper file path.
+
+```{r}
 # Save marine_sites
 write_csv(marine_sites,
           file.path(processed_data_path,
                     "marine_site_segments.csv"))
 
 ```
+
+## Classify Species Ranges
+
+With our prelimenarly data cleaned and ready to use, we can run a script that analyzes the range of each species in our 
 
 ## Output
 
