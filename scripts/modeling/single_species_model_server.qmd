@@ -6,18 +6,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
-library(terra)
-test_rast <- rast(nrows = 10, ncols = 10)
-values(test_rast) <- runif(100)
-
-terra::writeRaster(
-  test_rast,
-  filename = "/capstone/coastalconservation/data/processed/species_model_rasters/change_species_rasters/test.tif",
-  overwrite = TRUE
-)
-```
-
 clean_isles_biodiv
 
 ### Make map that shows where all the species are increasing or decreasing, not on average, nut cummulatively,
@@ -61,6 +49,7 @@ source(here::here('scripts', 'functions', 'clean_isles_biodiv.R'))
 source(here::here('scripts', 'functions', 'single_species_model.R'))
 source(here::here('scripts', 'functions', 'tmap_habitat_change.R'))
 source(here::here('scripts', 'functions', 'auto_species_models.R'))
+#source(here::here('scripts', 'functions', 'GAM_function.R'))
 ```
 
 The ones in bold are the ones that did not work
@@ -69,21 +58,21 @@ The ones in bold are the ones that did not work
 
 **Acanthinucella paucilirata**
 
-*Acrosorium spp* 
+*Acrosorium spp*
 
-**Aplysia californica** Worked, but only without GBM 
+*Aplysia californica* only worked without GBM
 
 *Bugula neritina*
 
-*Chondria arcuata* 
+*Chondria arcuata*
 
-**Chondria dasyphylla** try without gbm
+*Chondria dasyphylla* only worked without gbm
 
 *Dictyota coriacea*
 
-*Gastroclonium parvum* 
+*Gastroclonium parvum*
 
-**Haminoea vesicula** try without gbm
+*Haminoea vesicula* only worked without GBM
 
 *Jania rosea*
 
@@ -91,102 +80,123 @@ The ones in bold are the ones that did not work
 
 *Macron lividus*
 
-**Nemalion elminthoides**
+*Nemalion elminthoides* only worked without gbm
 
 *Norrisia norrisii*
 
-Opalia wroblewskyi 
+**Opalia wroblewskyi** Complete fail, probably not enough data
 
-**Paraxanthias taylori** 
+*Paraxanthias taylori* only worked without gbm
 
-*Pseudochama exogyra* 
+*Pseudochama exogyra*
 
-**Pseudomelatoma penicillata** 
+**Pseudomelatoma penicillata** Complete fail, probably not enough data
 
 *Roperia poulsoni*
 
-*Sargassum agardhianum* 
+*Sargassum agardhianum*
 
-**Taonia lennebackerae**
+*Taonia lennebackerae* only worked without gbm
 
-*Tegula aureotincta* 
+*Tegula aureotincta*
 
 *Zonaria farlowii*
 
 ### Southern range edge species
 
-Acmaea mitra
+*Acmaea mitra*
 
-Aglaophenia spp
+**Aglaophenia spp** Complete fail
 
-Ahnfeltiopsis linearis
+*Ahnfeltiopsis linearis*  only worked without gbm
 
-Amphissa columbiana
+*Amphissa columbiana*
 
-Analipus japonicus
+*Analipus japonicus*
 
-Calliostoma annulatum
+**Calliostoma annulatum** Complete fail not enough data
 
-Calliostoma canaliculatum
+*Calliostoma canaliculatum* only worked without gbm
 
-Calliostoma ligatum
+*Calliostoma ligatum*
 
-Chone minuta
+*Chone minuta* only worked without gbm
 
-Cirolana spp/Gnorimosphaeroma oregonense
+**Cirolana spp/Gnorimosphaeroma oregonense** had file naming issue
 
-Coryphella trilineata
+**Coryphella trilineata** Complete fail
 
-Cryptochiton stelleri
+*Cryptochiton stelleri*
 
-Cryptosiphonia woodii
+*Cryptosiphonia woodii*
 
-Derbesia marina
+**Derbesia marina**
 
-Desmarestia ligulata
+*Desmarestia ligulata*
 
-Dilsea californica
+*Dilsea californica*
 
-Diodora aspera
+**Diodora aspera**
 
-Fucus spp
+*Fucus spp*
 
-Halichondria spp
+*Halichondria spp*
 
-Halosaccion glandiforme
+*Halosaccion glandiforme* - had fewer warnings than most species
 
-Halymenia/Schizymenia spp
+**Halymenia/Schizymenia spp** Naming issue
 
-Haplogloia andersonii
+*Haplogloia andersonii* only worked without gbm
 
-Henricia spp
-Laminaria setchellii
-Laminaria sinclairii
-Lottia asmi
-Neoptilota/Ptilota spp
-Neorhodomela larix
-Neorhodomela oregona
-Onchidella carpenteri
-Opalia wroblewskyi*
-Pelvetiopsis arborescens/limitata
-Semibalanus cariosus
-Spirobranchus spinosus
-Styela montereyensis
-Tegula brunnea
-Ulothrix spp
+*Henricia spp*
 
+*Laminaria setchellii*
 
+*Laminaria sinclairii*
+
+*Lottia asmi* Less warning than others
+
+**Neoptilota/Ptilota spp** naming issue
+
+*Neorhodomela larix* less errors than usuals
+
+*Neorhodomela oregona*
+
+*Onchidella carpenteri* "In cor(predicted.values, o.predicted.values) : the standard deviation is zero"
+
+Opalia wroblewskyi\*
+
+**Pelvetiopsis arborescens/limitata** naming issue
+
+*Semibalanus cariosus*
+
+*Spirobranchus spinosus*
+
+**Styela montereyensis** looked like sd issues... crashed before i could read it
+
+*Tegula brunnea* Warning message: In cor(predicted.values, o.predicted.values) : the standard deviation is zero
+
+**Ulothrix spp**
+
+    # model tabItem ----
+    tabItem(tabName = "model"), # END model tabItem
+
+    # assessment tabItem ----
+    tabItem(tabName = "assessment"), # END assessment tabItem
+
+    # data tabItem ----
+    tabItem(tabName = "data") # END data tabItem
 
 ```{r}
 # Create rasters and show plots
-single_species_model('Zonaria farlowii')
+single_species_model('Amphissa columbiana')
 ```
 
 ```{r}
 # Create interactive tmap to show change in habitat
 # This works for species: Current list of species for this function: Acanthinucella spp, Acmaea mitra, Acrosorium spp, Agathistoma eiseni, Hedophyllum sessile, Pisaster ochraceus, Littorina keenae, 'Fucus spp'
 
-tmap_habitat_change('Norrisia norrisii')
+tmap_habitat_change('Analipus japonicus')
 ```
 
 ## Testing function
