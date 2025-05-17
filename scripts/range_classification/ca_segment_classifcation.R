@@ -20,7 +20,7 @@ ca_segments <- read_csv(segment_path) %>%
   select(segment_id, latitude)
 
 ca_segments <- ca_segments %>%
-  # Find min and max latitude for each buffer
+  # Find min and max latitude for each segment
   rename(
     min_latitude = latitude
   ) %>%

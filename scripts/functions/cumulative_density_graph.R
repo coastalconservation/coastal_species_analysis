@@ -41,14 +41,13 @@ cumulative_den_graph <- function(species_name) {
     geom_point(data = species_cum_den %>%
                         filter(!is.na(cum_den_norm)),
                aes(x = cum_den_norm), alpha = 0.6, size = 1.2) +
-    geom_vline(xintercept = 0.95, linetype = "dashed", color = "red") +
-    geom_vline(xintercept = 0.05, linetype = "dashed", color = "red") +
+    # annotate this stating point conception
     geom_hline(yintercept = 520859.2599 / 1000, linetype = "dotted", color = "blue") +
     scale_color_viridis_d(option = "B") +
     scale_fill_viridis_d(option = "B") +
     labs(
       title = paste(species_name, "- Cumulative Density"),
-      y = "Coastline Distance (km)",
+      y = "Distance along coastline\nfrom southern CA Border(km)",
       x = "Normalized Cumulative Density",
       color = "Year Bin",
       fill = "Year Bin"
