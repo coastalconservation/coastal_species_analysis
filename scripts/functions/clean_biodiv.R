@@ -39,8 +39,6 @@ clean_biodiv <- function(cbs_excel_name = "cbs_data_2025.xlsx",
   #..................Clean sheets to prep for merge..................
   # Clean point_contact dataset
   point_contact_clean <- point_contact_raw %>%
-    # Rename num of hits to total count
-    dplyr::rename(total_count = number_of_hits) %>%
     # Create new data collection source column
     dplyr::mutate(collection_source = "point contact")
 
