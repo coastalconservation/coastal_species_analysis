@@ -11,6 +11,13 @@ library(taxize)
 
 ```{r}
 source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+
+# Write data
+processed_data_path <- "/capstone/coastalconservation/data/processed"
+write_csv(
+  clean_biodiv(),
+  file.path(processed_data_path, "clean_biodiv_2025.csv")
+)
 ```
 
 this is where were going to explain our script

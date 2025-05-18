@@ -18,25 +18,28 @@ clean_biodiv <- function(cbs_excel_name = "cbs_data_2025.xlsx",
                          point_contact_sheet = "point_contact_summary_layered",
                          quadrat_sheet = "quadrat_summary_data",
                          swath_sheet = "swath_summary_data") {
-  #.........................Create full path.........................
+  # .........................Create full path.........................
   raw_data_path <- "/capstone/coastalconservation/data/raw"
   biodiversity_data_path <- "MARINe_data/biodiversity"
   input_path <- file.path(raw_data_path, biodiversity_data_path, cbs_excel_name)
 
-  #.........................Read in sheets..........................
+  # .........................Read in sheets..........................
   point_contact_raw <- readxl::read_excel(
-    input_path, sheet = point_contact_sheet
+    input_path,
+    sheet = point_contact_sheet
   )
 
   quadrat_raw <- readxl::read_excel(
-    input_path, sheet = quadrat_sheet
+    input_path,
+    sheet = quadrat_sheet
   )
 
   swath_raw <- readxl::read_excel(
-    input_path, sheet = swath_sheet
+    input_path,
+    sheet = swath_sheet
   )
 
-  #..................Clean sheets to prep for merge..................
+  # ..................Clean sheets to prep for merge..................
   # Clean point_contact dataset
   point_contact_clean <- point_contact_raw %>%
     # Create new data collection source column
@@ -52,10 +55,10 @@ clean_biodiv <- function(cbs_excel_name = "cbs_data_2025.xlsx",
     # Create new data collection source column
     dplyr::mutate(collection_source = "swath")
 
-  #....................Merge datasets together.....................
+  # ....................Merge datasets together.....................
   clean_biodiv <- dplyr::bind_rows(
     point_contact_clean, quadrat_clean, swath_clean
-    ) %>%
+  ) %>%
     # Filter out island data
     dplyr::filter(island == "Mainland") %>%
     # Filter out unwanted taxa
