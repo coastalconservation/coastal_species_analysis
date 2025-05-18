@@ -1,13 +1,12 @@
 cumulative_den_graph <- function(species_name) {
-  
   # Filter cumulative density to species of interest
-  species_cum_den <- cum_den_df(biodiv_df) %>% 
+  species_cum_den <- cum_den_df(biodiv_df) %>%
     filter(species_lump == species_name)
 
   # Fit cumulative densities to logistic distribution
   species_norm_logit <- glm(
-    cum_den_norm ~ coastline_m * year_bin, 
-    family = quasibinomial(link = "logit"), 
+    cum_den_norm ~ coastline_m * year_bin,
+    family = quasibinomial(link = "logit"),
     data = species_cum_den
   )
 
@@ -30,17 +29,25 @@ cumulative_den_graph <- function(species_name) {
     )
 
   # Create plot with confidence ribbons
-  extent_plot <- ggplot(species_pred, aes(y = coastline_m / 1000, 
-                                          x = cum_den_norm,
-                                          color = year_bin)) +
-    geom_ribbon(aes(xmin = lower,
-                    xmax = upper,
-                    fill = year_bin),
-                alpha = 0.2, color = NA) +
+  extent_plot <- ggplot(species_pred, aes(
+    y = coastline_m / 1000,
+    x = cum_den_norm,
+    color = year_bin
+  )) +
+    geom_ribbon(
+      aes(
+        xmin = lower,
+        xmax = upper,
+        fill = year_bin
+      ),
+      alpha = 0.2, color = NA
+    ) +
     geom_line(linewidth = 1) +
-    geom_point(data = species_cum_den %>%
-                        filter(!is.na(cum_den_norm)),
-               aes(x = cum_den_norm), alpha = 0.6, size = 1.2) +
+    geom_point(
+      data = species_cum_den %>%
+        filter(!is.na(cum_den_norm)),
+      aes(x = cum_den_norm), alpha = 0.6, size = 1.2
+    ) +
     # annotate this stating point conception
     geom_hline(yintercept = 520859.2599 / 1000, linetype = "dotted", color = "blue") +
     scale_color_viridis_d(option = "B") +
@@ -57,7 +64,7 @@ cumulative_den_graph <- function(species_name) {
       legend.position = "bottom",
       plot.title = element_text(face = "bold")
     ) #+
-    #coord_fixed(ratio=1500)
+  # coord_fixed(ratio=1500)
 
   return(extent_plot)
 }

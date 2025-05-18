@@ -57,5 +57,7 @@ ca_segments$segment_name <- segment_names[as.character(ca_segments$segment_id)]
 
 # Write data
 processed_data_path <- "/capstone/coastalconservation/data/processed/"
-write_csv(ca_segments,
-          file.path(processed_data_path, "ca_segments.csv"))
+write_csv(
+  ca_segments,
+  file.path(processed_data_path, "ca_segments.csv")
+)

@@ -1,10 +1,10 @@
 #' Calculate Cumulative Density and Normalized Cumulative Density in 5-Year Bins
 #'
-#' This function processes the cleaned MARINe surveys dataframe to compute the 
-#' cumulative sum of density values (`cum_den`) and the normalized cumulative 
+#' This function processes the cleaned MARINe surveys dataframe to compute the
+#' cumulative sum of density values (`cum_den`) and the normalized cumulative
 #' density (`cum_den_norm`) for each species group within 5-year bins.
-#' 
-#' The function filters out entries where the `collection_source` is "point contact", 
+#'
+#' The function filters out entries where the `collection_source` is "point contact",
 #' groups the data by `species_lump` and 5-year bin, arranges it by latitude within each group,
 #' and calculates cumulative density metrics.
 #'
@@ -28,23 +28,25 @@
 #'
 #' @import dplyr
 #' @export
-cum_den_df <- function(bio_df){
+cum_den_df <- function(bio_df) {
   processed_data_path <- "/capstone/coastalconservation/data/processed"
   marine_site_path <- file.path(processed_data_path, "marine_site_segments.csv")
   marine_site_segments <- read_csv(marine_site_path)
-  
+
   bio_df <- bio_df %>%
     left_join(
       marine_site_segments %>%
         select(marine_site_name, coastline_m)
     ) %>%
-    filter(state_province=="California") %>%
+    filter(state_province == "California") %>%
     # Filter out point contact entries
     filter(collection_source != "point contact") %>%
     # Create a 5-year bin variable
-    mutate(year_bin = paste0(floor(year / 5) * 5,
-                             "-",
-                             floor(year / 5) * 5 + 4)) %>%
+    mutate(year_bin = paste0(
+      floor(year / 5) * 5,
+      "-",
+      floor(year / 5) * 5 + 4
+    )) %>%
     mutate(year_bin = as.factor(year_bin)) %>%
     # Group by species and 5-year bin
     group_by(species_lump, year_bin) %>%
@@ -56,8 +58,9 @@ cum_den_df <- function(bio_df){
       cum_den_norm = cum_den / max(cum_den, na.rm = TRUE),
     ) %>%
     # Select relevant columns
-    select(cum_den, cum_den_norm, coastline_m, year,
-           state_province, year_bin, species_lump)
+    select(
+      cum_den, cum_den_norm, coastline_m, year,
+      state_province, year_bin, species_lump
+    )
   return(bio_df)
-
 }

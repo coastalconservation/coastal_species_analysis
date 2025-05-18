@@ -26,7 +26,7 @@
 #' \dontrun{
 #' # Plot range extent for Roperia
 #' range_extent_graph("Roperia poulsoni")
-#' 
+#'
 #' # Save the plot
 #' butterfly_range <- range_extent_graph("Roperia poulsoni")
 #' ggsave("tiger_swallowtail_range.png", butterfly_range, width = 8, height = 6)
@@ -37,45 +37,45 @@
 #' @importFrom tidyr expand_grid
 #' @importFrom stats glm binomial predict approx
 #'
-#' @seealso 
+#' @seealso
 #' \code{\link{cum_den_df}} for the function that prepares cumulative density data
 #' \code{\link{cumulative_den_graph}} for related visualization of the full density curves
 #'
 #' @export
-range_extent_df <- function(species_name){
-  
+range_extent_df <- function(species_name) {
   # Get the cumulative density data for the specified species
-  species_cum_den <- cum_den_df(biodiv_df) %>% 
+  species_cum_den <- cum_den_df(biodiv_df) %>%
     filter(species_lump == species_name)
-  
+
   # Fit logistic regression model to predict cumulative density from latitude and year
   species_norm_logit <- glm(
-    cum_den_norm ~ coastline_m * year, 
-    family = quasibinomial(link = "logit"), 
+    cum_den_norm ~ coastline_m * year,
+    family = quasibinomial(link = "logit"),
     data = species_cum_den
   )
-  
+
   # Generate predictions across a grid of latitudes and years
   species_pred <- expand_grid(
     coastline_m = seq(0, 1800000, length.out = 1000),
-    year = unique(species_cum_den$year)) %>%
+    year = unique(species_cum_den$year)
+  ) %>%
     mutate(
       cum_den_norm = predict(
         species_norm_logit,
         newdata = .,
         type = "response"
-        )
+      )
     )
-  
+
   # Calculate the 5th and 95th percentile latitudes for each year
-  species_extent_df <- species_pred %>% 
-    group_by(year) %>% 
+  species_extent_df <- species_pred %>%
+    group_by(year) %>%
     summarise(
       # Northern edge (95th percentile)
       max_lat = approx(cum_den_norm, coastline_m, xout = 0.90)$y,
       # Southern edge (5th percentile)
       min_lat = approx(cum_den_norm, coastline_m, xout = 0.10)$y
-    ) %>% 
+    ) %>%
     mutate(
       species_name = species_name
     )
@@ -91,8 +91,10 @@ range_extent_plot <- function(species_extent_df) {
     geom_point(aes(y = min_lat), color = "#4575B4", size = 2, alpha = 0.8) +
     # Point Conception latitude line (replace 520859.2599 with actual latitude if available)
     geom_hline(yintercept = 520859.2599, linetype = "dashed", color = "darkgray") +
-    annotate("text", x = min(species_extent_df$year), y = 440820 + 0.5,
-             label = "Point Conception", hjust = 0, color = "darkgray", size = 3.5) +
+    annotate("text",
+      x = min(species_extent_df$year), y = 440820 + 0.5,
+      label = "Point Conception", hjust = 0, color = "darkgray", size = 3.5
+    ) +
     labs(
       title = paste("5th and 95th Percentile Range of", species_extent_df$species_name[1]),
       x = "Year",

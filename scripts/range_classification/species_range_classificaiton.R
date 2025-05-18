@@ -23,24 +23,26 @@ present_observations <- biodiv_df %>%
   # only work with non zero values
   filter(
     total_count > 0 |
-    number_of_hits > 0
+      number_of_hits > 0
   )
 
 # Find southernmost observation site
 southern_sites <- present_observations %>%
   group_by(species_lump) %>%
   slice_min(order_by = latitude, n = 1, with_ties = FALSE) %>%
-  select(species_lump, 
-         southern_extent_lat = latitude,
-         southern_site_name = marine_site_name)
+  select(species_lump,
+    southern_extent_lat = latitude,
+    southern_site_name = marine_site_name
+  )
 
 # Find northernmost observation site
 northern_sites <- present_observations %>%
   group_by(species_lump) %>%
   slice_max(order_by = latitude, n = 1, with_ties = FALSE) %>%
   select(species_lump,
-         northern_extent_lat = latitude,
-         northern_site_name = marine_site_name)
+    northern_extent_lat = latitude,
+    northern_site_name = marine_site_name
+  )
 
 # Join tables to create extent
 species_extent <- southern_sites %>%
@@ -51,8 +53,10 @@ species_extent <- species_extent %>%
   # First join on southern_extent_lat (southern)
   left_join(
     marine_site_segments %>%
-      select(marine_site_name, segment_id,
-             segment_name, coastline_m) %>%
+      select(
+        marine_site_name, segment_id,
+        segment_name, coastline_m
+      ) %>%
       rename(
         southern_extent_m = coastline_m
       ),
@@ -65,8 +69,10 @@ species_extent <- species_extent %>%
   # Second join on northern_extent_lat (northern)
   left_join(
     marine_site_segments %>%
-      select(marine_site_name, segment_id,
-             segment_name, coastline_m) %>%
+      select(
+        marine_site_name, segment_id,
+        segment_name, coastline_m
+      ) %>%
       rename(
         northern_extent_m = coastline_m
       ),
@@ -86,5 +92,7 @@ species_extent <- species_extent %>%
 
 # Write file
 species_extent_path <- file.path(processed_data_path, "species_extent.csv")
-write_csv(species_extent,
-          species_extent_path)
+write_csv(
+  species_extent,
+  species_extent_path
+)

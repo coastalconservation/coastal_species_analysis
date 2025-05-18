@@ -34,9 +34,13 @@ biodiv_df <- clean_biodiv()
 ## Macron lividus
 ```{r}
 # max latitude ever
-max((biodiv_df %>% 
-      filter(species_lump=="Macron lividus",
-            (density_per_m2>0|total_count>0)))$latitude)
+biodiv_df %>%
+  filter(
+    species_lump == "Macron lividus",
+    (density_per_m2 > 0 | total_count > 0)
+  ) %>%
+  pull(latitude) %>%
+  max()
 
 # Roperia poulsoni has Northern Range edge in Southern Dangermond
 
