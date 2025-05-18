@@ -42,7 +42,10 @@
 #' \code{\link{cumulative_den_graph}} for related visualization of the full density curves
 #'
 #' @export
-range_extent_df <- function(species_name) {
+#' 
+source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+
+range_extent_df <- function(species_name, biodiv_df = clean_biodiv()) {
   # Get the cumulative density data for the specified species
   species_cum_den <- cum_den_df(biodiv_df) %>%
     filter(species_lump == species_name)

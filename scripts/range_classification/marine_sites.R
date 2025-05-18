@@ -6,8 +6,8 @@ library(here)
 source(here::here("scripts", "functions", "clean_biodiv.R"))
 
 # Initialize file paths
-raw_data_path <- "/capstone/coastalconservation/data/raw/"
-processed_data_path <- "/capstone/coastalconservation/data/processed/"
+raw_data_path <- "/capstone/coastalconservation/data/raw"
+processed_data_path <- "/capstone/coastalconservation/data/processed"
 site_csv_path <- "spatial_data/marine_sites_distance_coast.csv"
 
 marine_site_distance_path <- file.path(raw_data_path, site_csv_path)
