@@ -382,9 +382,26 @@ dangermond_boundary_species <- species_extent %>%
 ```
 
 ```{r}
-dangermond_boundary_species 
+dangermond_boundary_species %>% pull(species_lump)
 ```
 
+Northern
+```{r}
+dangermond_boundary_species %>% 
+  filter(
+    northern_extent_name == "Southern Point Conception"
+  ) %>%
+  pull(species_lump)
+```
+
+Southern
+```{r}
+dangermond_boundary_species %>% 
+  filter(
+    southern_extent_name == "Northern Point Conception"
+  ) %>%
+  pull(species_lump)
+```
 How many species have a range boundary in California?
 
 ```{r}
