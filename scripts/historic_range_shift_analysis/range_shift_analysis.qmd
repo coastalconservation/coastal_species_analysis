@@ -12,7 +12,20 @@ library(here)
 library(readr)
 library(lubridate)
 library(tidyverse)
-library(stats)
+library(stats) # Load necessary libraries
+library(here) # For building file paths relative to project root
+library(readr) # For reading CSV files
+library(lubridate) # For working with date/time data (used in sourced scripts)
+library(dplyr) # Data manipulation
+library(tidyr) # Data tidying
+library(purrr) # Functional programming tools
+library(ggplot2) # Plotting
+library(mgcv) # Generalized Additive Models
+
+# Load data-cleaning and analysis functions
+source(here("scripts", "functions", "cumulative_density_dataframe.R"))
+
+
 ```
 
 ## Read data
@@ -27,20 +40,27 @@ source(here("scripts", "functions", "cumulative_density_graph.R"))
 ```{r}
 # Load data
 species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
-marine_path <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv")
-biodiv_df <- clean_biodiv()
+marine_path <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv") # Load processed datasets
+processed_data_path <- "/capstone/coastalconservation/data/processed"
+biodiv_df <- read_csv(
+    file.path(
+        processed_data_path,
+        "clean_biodiv_2025.csv"
+    ),
+    show_col_types = FALSE
+)
 ```
 
 ## Macron lividus
 ```{r}
 # max latitude ever
 biodiv_df %>%
-  filter(
-    species_lump == "Macron lividus",
-    (density_per_m2 > 0 | total_count > 0)
-  ) %>%
-  pull(latitude) %>%
-  max()
+    filter(
+        species_lump == "Macron lividus",
+        (density_per_m2 > 0 | total_count > 0)
+    ) %>%
+    pull(latitude) %>%
+    max()
 
 # Roperia poulsoni has Northern Range edge in Southern Dangermond
 
@@ -48,51 +68,63 @@ range_trend("Macron lividus")
 ```
 
 ```{r}
-dangermond_boundary_species <- species_extent %>% 
-  filter(str_detect(southern_extent_name, "Point Conception") |
-         str_detect(northern_extent_name, "Point Conception")
-        )
+dangermond_boundary_species <- species_extent %>%
+    filter(str_detect(southern_extent_name, "Point Conception") |
+        str_detect(northern_extent_name, "Point Conception"))
 ```
 
 Northern
 ```{r}
-northern_boundary_species <- dangermond_boundary_species %>% 
-  filter(
-    northern_extent_name == "Southern Point Conception"
-  ) %>%
-  pull(species_lump)
+northern_boundary_species <- dangermond_boundary_species %>%
+    filter(
+        northern_extent_name == "Southern Point Conception"
+    ) %>%
+    pull(species_lump)
 ```
 
 Southern
 ```{r}
-southern_boundary_species <- dangermond_boundary_species %>% 
-  filter(
-    southern_extent_name == "Northern Point Conception"
-  ) %>%
-  pull(species_lump)
+southern_boundary_species <- dangermond_boundary_species %>%
+    filter(
+        southern_extent_name == "Northern Point Conception"
+    ) %>%
+    pull(species_lump)
 ```
 
 ```{r}
-northern_trends_df <- map_dfr(northern_boundary_species,
- function(species_name) {
-  result <- range_trend(species_name)
-  tibble(
-    species = species_name,
-    north_trend_positive = unname(result$n_bound_pos_trend)
-  )
-})
+northern_trends_df <- map_dfr(
+    northern_boundary_species,
+    function(species_name) {
+        result <- range_trend(species_name)
+        tibble(
+            species = species_name,
+            north_trend_positive = unname(result$n_bound_pos_trend),
+            n_trend_rate = unname(result$n_trend_rate)
+        )
+    }
+)
 ```
 
+```{r}
+northern_trends_df
+```
 
 ```{r}
-southern_trends_df <- map_dfr(southern_boundary_species,
- function(species_name) {
-  result <- range_trend(species_name)
-  tibble(
-    species = species_name,
-    north_trend_positive = unname(result$s_bound_pos_trend)
-  )
-})
+southern_trends_df <- map_dfr(
+    southern_boundary_species,
+    function(species_name) {
+        result <- range_trend(species_name)
+        tibble(
+            species = species_name,
+            north_trend_positive = unname(result$s_bound_pos_trend),
+            n_trend_rate = unname(result$s_trend_rate)
+        )
+    }
+)
+```
+
+```{r}
+southern_trends_df
 ```
 
 ## Matteo
@@ -102,45 +134,55 @@ southern_trends_df <- map_dfr(southern_boundary_species,
 ```{r}
 # Northern Range Edge (2000-2024)
 biodiv_df %>%
-  filter(species_lump == "Tegula aureotincta",
-         latitude > 32.53 & latitude < 35.88) %>% # Northern Range Edge
-  ggplot(aes(x = density_per_m2)) +
-  stat_ecdf(geom = "step") +
-  labs(title = "Empirical Cumulative Distribution Function") +
-  theme_bw()
+    filter(
+        species_lump == "Tegula aureotincta",
+        latitude > 32.53 & latitude < 35.88
+    ) %>% # Northern Range Edge
+    ggplot(aes(x = density_per_m2)) +
+    stat_ecdf(geom = "step") +
+    labs(title = "Empirical Cumulative Distribution Function") +
+    theme_bw()
 
 # Every 5 years
 biodiv_df %>%
-  filter(species_lump == "Tegula aureotincta",
-         latitude > 32.53 & latitude < 35.88) %>% # Northern Range Edge
-  mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
-  ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
-  stat_ecdf(geom = "step") +
-  labs(title = "Empirical Cumulative Distribution Function",
-       color = "5 year period") +
-  theme_bw()
+    filter(
+        species_lump == "Tegula aureotincta",
+        latitude > 32.53 & latitude < 35.88
+    ) %>% # Northern Range Edge
+    mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
+    ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
+    stat_ecdf(geom = "step") +
+    labs(
+        title = "Empirical Cumulative Distribution Function",
+        color = "5 year period"
+    ) +
+    theme_bw()
 
 # facet by year bin
 biodiv_df %>%
-  filter(species_lump == "Tegula aureotincta",
-         latitude > 32.53 & latitude < 35.88) %>% # Northern Range Edge
-  mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
-  ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
-  stat_ecdf(geom = "step") +
-  labs(title = "Empirical Cumulative Distribution Function",
-       color = "5 year period") +
-  facet_wrap(~year_bin) +
-  theme_bw()
+    filter(
+        species_lump == "Tegula aureotincta",
+        latitude > 32.53 & latitude < 35.88
+    ) %>% # Northern Range Edge
+    mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
+    ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
+    stat_ecdf(geom = "step") +
+    labs(
+        title = "Empirical Cumulative Distribution Function",
+        color = "5 year period"
+    ) +
+    facet_wrap(~year_bin) +
+    theme_bw()
 ```
 
 ### Using cumden norm
 ```{r}
 northern_cum_den %>%
-  filter(species_lump == "Tegula aureotincta") %>%
-  ggplot(aes(x = cum_den_norm)) +
-  stat_ecdf(geom = "step", na.rm = TRUE) +
-  labs(title = "Empirical Cumulative Distribution Function") +
-  theme_bw()
+    filter(species_lump == "Tegula aureotincta") %>%
+    ggplot(aes(x = cum_den_norm)) +
+    stat_ecdf(geom = "step", na.rm = TRUE) +
+    labs(title = "Empirical Cumulative Distribution Function") +
+    theme_bw()
 ```
 
 

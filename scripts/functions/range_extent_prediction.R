@@ -46,35 +46,6 @@
 source(here::here("scripts", "functions", "clean_biodiv.R"))
 
 range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
-  # Load necessary libraries
-  library(here) # For building file paths relative to project root
-  library(readr) # For reading CSV files
-  library(lubridate) # For working with date/time data (used in sourced scripts)
-  library(dplyr) # Data manipulation
-  library(tidyr) # Data tidying
-  library(purrr) # Functional programming tools
-  library(ggplot2) # Plotting
-  library(mgcv) # Generalized Additive Models
-
-  # Load data-cleaning and analysis functions
-  source(here("scripts", "functions", "cumulative_density_dataframe.R"))
-
-  # Load processed datasets
-  processed_data_path <- "/capstone/coastalconservation/data/processed"
-  marine_path <- read_csv(
-    file.path(
-      processed_data_path,
-      "marine_site_segments.csv"
-    ),
-    show_col_types = FALSE
-  )
-  biodiv_df <- read_csv(
-    file.path(
-      processed_data_path,
-      "clean_biodiv_2025.csv"
-    ),
-    show_col_types = FALSE
-  )
 
   # Filter for California and target species
   species_biodiv <- biodiv_df %>%
@@ -174,7 +145,9 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
 
   return(list(
     n_bound_pos_trend = coef(north_boundary_model)[2] %>% unname() > 0,
-    s_bound_pos_trend = coef(south_boundary_model)[2] %>% unname() > 0
+    n_trend_rate = coef(north_boundary_model)[2] %>% unname(),
+    s_bound_pos_trend = coef(south_boundary_model)[2] %>% unname() > 0,
+    s_trend_rate = coef(south_boundary_model)[2] %>% unname()
   ))
 }
 
