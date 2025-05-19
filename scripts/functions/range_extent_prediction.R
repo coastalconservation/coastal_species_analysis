@@ -42,73 +42,181 @@
 #' \code{\link{cumulative_den_graph}} for related visualization of the full density curves
 #'
 #' @export
-#' 
-source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+#'
+source(here::here("scripts", "functions", "clean_biodiv.R"))
 
-range_extent_df <- function(species_name, biodiv_df = clean_biodiv()) {
-  # Get the cumulative density data for the specified species
-  species_cum_den <- cum_den_df(biodiv_df) %>%
-    filter(species_lump == species_name)
+range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
+  # Load necessary libraries
+  library(here) # For building file paths relative to project root
+  library(readr) # For reading CSV files
+  library(lubridate) # For working with date/time data (used in sourced scripts)
+  library(dplyr) # Data manipulation
+  library(tidyr) # Data tidying
+  library(purrr) # Functional programming tools
+  library(ggplot2) # Plotting
+  library(mgcv) # Generalized Additive Models
 
-  # Fit logistic regression model to predict cumulative density from latitude and year
-  species_norm_logit <- glm(
-    cum_den_norm ~ coastline_m * year,
-    family = quasibinomial(link = "logit"),
-    data = species_cum_den
+  # Load data-cleaning and analysis functions
+  source(here("scripts", "functions", "cumulative_density_dataframe.R"))
+
+  # Load processed datasets
+  processed_data_path <- "/capstone/coastalconservation/data/processed"
+  marine_path <- read_csv(
+    file.path(
+      processed_data_path,
+      "marine_site_segments.csv"
+    ),
+    show_col_types = FALSE
+  )
+  biodiv_df <- read_csv(
+    file.path(
+      processed_data_path,
+      "clean_biodiv_2025.csv"
+    ),
+    show_col_types = FALSE
   )
 
-  # Generate predictions across a grid of latitudes and years
+  # Filter for California and target species
+  species_biodiv <- biodiv_df %>%
+    left_join(
+      marine_path %>%
+        select(marine_site_name, coastline_m),
+      by = join_by(marine_site_name)
+    ) %>%
+    filter(
+      state_province == "California",
+      species_lump == species_name
+    )
+  # Step 1: Create cumulative density dataframe
+  species_cum_den <- cum_den_df(species_biodiv)
+
+  # Exit early if no data
+  # if (nrow(species_cum_den) == 0 || all(is.na(species_cum_den$cum_den_norm))) {
+  #   return(list(
+  #     n_bound_pos_trend = NA,
+  #     s_bound_pos_trend = NA
+  #   ))
+  # }
+  if (nrow(species_cum_den) < 10 || all(species_cum_den$cum_den == 0, na.rm = TRUE)) {
+    warning(paste("Insufficient or all-zero data for:", species_name))
+    return(list(
+      n_bound_pos_trend = NA,
+      s_bound_pos_trend = NA
+    ))
+  }
+
+
+  # Function to add 0 and 1 cumulative density boundaries per group
+  add_boundaries <- function(df) {
+    boundary_pts <- tibble(
+      coastline_m = c(min(df$coastline_m), max(df$coastline_m)),
+      cum_den_norm = c(0, 1),
+      species_lump = first(df$species_lump),
+      year_bin = first(df$year_bin),
+      year = first(df$year),
+      state_province = first(df$state_province)
+    )
+    bind_rows(boundary_pts, df)
+  }
+
+  # Add boundaries and combine all groups
+  species_cum_den_bounded <- species_cum_den %>%
+    group_by(year_bin) %>%
+    group_split() %>%
+    map_dfr(add_boundaries)
+
+  # Step 2: Fit a Generalized Additive Model (GAM)
+  species_gam <- gam(
+    cum_den_norm ~ s(coastline_m, by = year_bin),
+    family = quasibinomial(link = "logit"),
+    data = species_cum_den_bounded
+  )
+
+  # Step 3: Generate model predictions
   species_pred <- expand_grid(
-    coastline_m = seq(0, 1800000, length.out = 1000),
-    year = unique(species_cum_den$year)
+    coastline_m = seq(
+      0,
+      max(species_cum_den$coastline_m),
+      length.out = 1000
+    ),
+    year_bin = unique(species_cum_den$year_bin)
   ) %>%
     mutate(
       cum_den_norm = predict(
-        species_norm_logit,
+        species_gam,
         newdata = .,
         type = "response"
       )
     )
 
-  # Calculate the 5th and 95th percentile latitudes for each year
-  species_extent_df <- species_pred %>%
-    group_by(year) %>%
-    summarise(
-      # Northern edge (95th percentile)
-      max_lat = approx(cum_den_norm, coastline_m, xout = 0.90)$y,
-      # Southern edge (5th percentile)
-      min_lat = approx(cum_den_norm, coastline_m, xout = 0.10)$y
-    ) %>%
+  # Step 5: Estimate 5th and 95th percentile boundaries per year_bin
+  species_df <- species_pred %>%
+    group_by(year_bin) %>%
+    arrange(cum_den_norm, coastline_m, .by_group = TRUE) %>%
+    nest() %>%
     mutate(
-      species_name = species_name
-    )
+      boundaries = map(data, ~ {
+        df <- .x %>% distinct(cum_den_norm, .keep_all = TRUE)
+        list(
+          north = approx(df$cum_den_norm, df$coastline_m, xout = 0.95, rule = 2)$y,
+          south = approx(df$cum_den_norm, df$coastline_m, xout = 0.05, rule = 2)$y
+        )
+      }),
+      north_boundary = map_dbl(boundaries, "north"),
+      south_boundary = map_dbl(boundaries, "south"),
+      year_floor = as.integer(substr(year_bin, 1, 4))
+    ) %>%
+    select(year_bin, north_boundary, south_boundary, year_floor)
 
-  return(species_extent_df)
+  # Step 6: Fit linear models to track boundary movement over time
+  north_boundary_model <- lm(north_boundary ~ year_floor, data = species_df)
+  south_boundary_model <- lm(south_boundary ~ year_floor, data = species_df)
+
+  return(list(
+    n_bound_pos_trend = coef(north_boundary_model)[2] %>% unname() > 0,
+    s_bound_pos_trend = coef(south_boundary_model)[2] %>% unname() > 0
+  ))
 }
 
-range_extent_plot <- function(species_extent_df) {
-  ggplot(species_extent_df, aes(x = year)) +
-    # Northern boundary (e.g., 95th percentile)
-    geom_point(aes(y = max_lat), color = "#D73027", size = 2, alpha = 0.8) +
-    # Southern boundary (e.g., 5th percentile)
-    geom_point(aes(y = min_lat), color = "#4575B4", size = 2, alpha = 0.8) +
-    # Point Conception latitude line (replace 520859.2599 with actual latitude if available)
-    geom_hline(yintercept = 520859.2599, linetype = "dashed", color = "darkgray") +
-    annotate("text",
-      x = min(species_extent_df$year), y = 440820 + 0.5,
-      label = "Point Conception", hjust = 0, color = "darkgray", size = 3.5
-    ) +
-    labs(
-      title = paste("5th and 95th Percentile Range of", species_extent_df$species_name[1]),
-      x = "Year",
-      y = "Coastline Distance",
-      caption = "Red: Northern boundary (95th percentile), Blue: Southern boundary (5th percentile)"
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-      plot.title = element_text(face = "bold", size = 14),
-      plot.caption = element_text(size = 10, color = "gray30"),
-      axis.title = element_text(size = 12),
-      panel.grid.minor = element_blank()
-    )
-}
+
+# # Predict boundary positions
+# north_preds <- data.frame(
+#   year_bin = species_df$year_bin,
+#   prediction = predict(north_boundary_model)
+# )
+
+# south_preds <- data.frame(
+#   year_bin = species_df$year_bin,
+#   prediction = predict(south_boundary_model)
+# )
+
+# # Step 4: Plot raw data and GAM fit
+# ggplot(species_cum_den, aes(
+#   y = coastline_m,
+#   x = cum_den_norm, color = year_bin
+# )) +
+#   geom_point(alpha = 0.6) +
+#   geom_line(aes(group = year_bin), data = species_pred) +
+#   geom_vline(xintercept = c(0.95, 0.05), linetype = "dashed") +
+#   labs(
+#     title = paste(species_name, "Cumulative Density (GAM)"),
+#     y = "Coastline (m)",
+#     x = "Normalized Cumulative Density"
+#   )
+
+
+# # Step 7: Plot northern and southern boundary shifts over time
+# ggplot(species_df, aes(x = year_floor)) +
+#   geom_rect(
+#     aes(xmin = -Inf, xmax = Inf, ymin = 520859.2599 - 100000, ymax = 520859.2599 + 100000),
+#     fill = "lightblue", alpha = 0.2, inherit.aes = FALSE
+#   ) +
+#   geom_point(aes(y = north_boundary), color = "red") +
+#   geom_point(aes(y = south_boundary), color = "black") +
+#   geom_smooth(aes(y = north_boundary), method = "lm", se = FALSE, color = "red") +
+#   geom_smooth(aes(y = south_boundary), method = "lm", se = FALSE, color = "black") +
+#   labs(
+#     title = "Northern and Southern Range Boundaries Over Time",
+#     y = "Coastline position (m)",
+#     x = "Year"
+#   )

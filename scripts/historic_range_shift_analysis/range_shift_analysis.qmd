@@ -44,64 +44,55 @@ biodiv_df %>%
 
 # Roperia poulsoni has Northern Range edge in Southern Dangermond
 
-ggsave("HamVes_cumulative.png", cumulative_den_graph("Macron lividus"), bg="white")
-ggsave("HamVes_range.png", range_extent_plot(range_extent_df("Macron lividus")), bg="white")
+range_trend("Macron lividus")
 ```
 
-
 ```{r}
-range_extent_plot(range_extent_df("Macron lividus"))
-```
-```{r}
-ggplot(biodiv_df %>% filter(species_lump=="Roperia poulsoni"),
-       aes(x=year, y=latitude, aes=density_per_m2)) +
-  geom_point()
+dangermond_boundary_species <- species_extent %>% 
+  filter(str_detect(southern_extent_name, "Point Conception") |
+         str_detect(northern_extent_name, "Point Conception")
+        )
 ```
 
-# Min and Max lat
-
+Northern
 ```{r}
-biodiv_df %>% 
-  filter(species_lump %in% northern_dangermond_species_list) %>% 
-  filter(!is.na(density_per_m2)) %>% 
-  group_by(year) %>% 
-  summarise(min_lat = min(latitude),
-            max_lat = max(latitude)) %>% 
-  View()
+northern_boundary_species <- dangermond_boundary_species %>% 
+  filter(
+    northern_extent_name == "Southern Point Conception"
+  ) %>%
+  pull(species_lump)
 ```
 
-# ECDF
+Southern
+```{r}
+southern_boundary_species <- dangermond_boundary_species %>% 
+  filter(
+    southern_extent_name == "Northern Point Conception"
+  ) %>%
+  pull(species_lump)
+```
 
 ```{r}
-ggplot(northern_cum_den,
-       aes(x = latitude)) +
-  # Plot the Normalized CDF
-  geom_line(aes(y = cum_den_norm, color = "Normalized CDF"), size = 1) +
-  
-  # Plot the Empirical CDF (if available)
-  # geom_line(aes(y = ecdf_values, color = "Empirical CDF"), size = 1) +
-  
-  # Facet by 5-year bin
-  facet_wrap(~ year_bin, scales = "free_x") +
-  
-  # Labels and title
-  labs(
-    title = "Normalized vs Empirical CDF for Tegula aureotincta by 5-Year Bins",
-    x = "Latitude",
-    y = "Cumulative Probability",
-    color = "Distribution Type"
-  ) +
-  
-  # Custom color mapping
-  scale_color_manual(values = c("Normalized CDF" = "blue", "Empirical CDF" = "red")) +
-  
-  # Theme styling
-  theme_minimal() +
-  theme(
-    legend.position = "bottom",
-    plot.title = element_text(hjust = 0.5)
+northern_trends_df <- map_dfr(northern_boundary_species,
+ function(species_name) {
+  result <- range_trend(species_name)
+  tibble(
+    species = species_name,
+    north_trend_positive = unname(result$n_bound_pos_trend)
   )
+})
+```
 
+
+```{r}
+southern_trends_df <- map_dfr(southern_boundary_species,
+ function(species_name) {
+  result <- range_trend(species_name)
+  tibble(
+    species = species_name,
+    north_trend_positive = unname(result$s_bound_pos_trend)
+  )
+})
 ```
 
 ## Matteo
