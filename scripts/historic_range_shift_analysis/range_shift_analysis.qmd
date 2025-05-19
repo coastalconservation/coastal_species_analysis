@@ -99,14 +99,16 @@ northern_trends_df <- map_dfr(
         tibble(
             species = species_name,
             north_trend_positive = unname(result$n_bound_pos_trend),
-            n_trend_rate = unname(result$n_trend_rate)
+            n_trend_rate = unname(result$n_trend_rate), 
+            r_squared = unname(result$n_r_squared),
+            p_val = unname(result$n_p_val)
         )
     }
 )
 ```
 
 ```{r}
-northern_trends_df
+northern_trends_df %>% View()
 ```
 
 ```{r}
@@ -117,14 +119,16 @@ southern_trends_df <- map_dfr(
         tibble(
             species = species_name,
             north_trend_positive = unname(result$s_bound_pos_trend),
-            n_trend_rate = unname(result$s_trend_rate)
+            n_trend_rate = unname(result$s_trend_rate),
+            r_squared = unname(result$s_r_squared),
+            p_val = unname(result$s_p_val)
         )
     }
 )
 ```
 
 ```{r}
-southern_trends_df
+southern_trends_df %>% View()
 ```
 
 ## Matteo
