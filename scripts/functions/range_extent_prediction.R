@@ -46,36 +46,6 @@
 source(here::here("scripts", "functions", "clean_biodiv.R"))
 
 range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
-  # Load necessary libraries
-  library(here) # For building file paths relative to project root
-  library(readr) # For reading CSV files
-  library(lubridate) # For working with date/time data (used in sourced scripts)
-  library(dplyr) # Data manipulation
-  library(tidyr) # Data tidying
-  library(purrr) # Functional programming tools
-  library(ggplot2) # Plotting
-  library(mgcv) # Generalized Additive Models
-
-  # Load data-cleaning and analysis functions
-  source(here("scripts", "functions", "cumulative_density_dataframe.R"))
-
-  # Load processed datasets
-  processed_data_path <- "/capstone/coastalconservation/data/processed"
-  marine_path <- read_csv(
-    file.path(
-      processed_data_path,
-      "marine_site_segments.csv"
-    ),
-    show_col_types = FALSE
-  )
-  biodiv_df <- read_csv(
-    file.path(
-      processed_data_path,
-      "clean_biodiv_2025.csv"
-    ),
-    show_col_types = FALSE
-  )
-
   # Filter for California and target species
   species_biodiv <- biodiv_df %>%
     left_join(
@@ -90,14 +60,13 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
   # Step 1: Create cumulative density dataframe
   species_cum_den <- cum_den_df(species_biodiv)
 
-  # Exit early if no data
-  # if (nrow(species_cum_den) == 0 || all(is.na(species_cum_den$cum_den_norm))) {
-  #   return(list(
-  #     n_bound_pos_trend = NA,
-  #     s_bound_pos_trend = NA
-  #   ))
-  # }
-  if (nrow(species_cum_den) < 10 || all(species_cum_den$cum_den == 0, na.rm = TRUE)) {
+  if (
+    nrow(species_cum_den) < 10 ||
+      all(
+        species_cum_den$cum_den == 0,
+        na.rm = TRUE
+      )
+  ) {
     warning(paste("Insufficient or all-zero data for:", species_name))
     return(list(
       n_bound_pos_trend = NA,
@@ -108,32 +77,32 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
 
   # Function to add 0 and 1 cumulative density boundaries per group
   add_boundaries <- function(df) {
-    boundary_pts <- tibble(
+    boundary_pts <- dplyr::tibble(
       coastline_m = c(min(df$coastline_m), max(df$coastline_m)),
       cum_den_norm = c(0, 1),
-      species_lump = first(df$species_lump),
-      year_bin = first(df$year_bin),
-      year = first(df$year),
-      state_province = first(df$state_province)
+      species_lump = dplyr::first(df$species_lump),
+      year_bin = dplyr::first(df$year_bin),
+      year = dplyr::first(df$year),
+      state_province = dplyr::first(df$state_province)
     )
-    bind_rows(boundary_pts, df)
+    dplyr::bind_rows(boundary_pts, df)
   }
 
   # Add boundaries and combine all groups
   species_cum_den_bounded <- species_cum_den %>%
-    group_by(year_bin) %>%
-    group_split() %>%
-    map_dfr(add_boundaries)
+    dplyr::group_by(year_bin) %>%
+    dplyr::group_split() %>%
+    purrr::map_dfr(add_boundaries)
 
   # Step 2: Fit a Generalized Additive Model (GAM)
-  species_gam <- gam(
+  species_gam <- mgcv::gam(
     cum_den_norm ~ s(coastline_m, by = year_bin),
     family = quasibinomial(link = "logit"),
     data = species_cum_den_bounded
   )
 
   # Step 3: Generate model predictions
-  species_pred <- expand_grid(
+  species_pred <- tidyr::expand_grid(
     coastline_m = seq(
       0,
       max(species_cum_den$coastline_m),
@@ -141,7 +110,7 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
     ),
     year_bin = unique(species_cum_den$year_bin)
   ) %>%
-    mutate(
+    dplyr::mutate(
       cum_den_norm = predict(
         species_gam,
         newdata = .,
@@ -174,7 +143,13 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
 
   return(list(
     n_bound_pos_trend = coef(north_boundary_model)[2] %>% unname() > 0,
-    s_bound_pos_trend = coef(south_boundary_model)[2] %>% unname() > 0
+    n_trend_rate = coef(north_boundary_model)[2] %>% unname(),
+    n_p_val = summary(north_boundary_model)$coefficients[2, 4],
+    n_r_squared = summary(north_boundary_model)$r.squared,
+    s_bound_pos_trend = coef(south_boundary_model)[2] %>% unname() > 0,
+    s_trend_rate = coef(south_boundary_model)[2] %>% unname(),
+    s_p_val = summary(south_boundary_model)$coefficients[2, 4],
+    s_r_squared = summary(south_boundary_model)$r.squared
   ))
 }
 
