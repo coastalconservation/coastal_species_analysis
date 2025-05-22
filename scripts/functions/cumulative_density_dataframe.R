@@ -29,38 +29,47 @@
 #' @import dplyr
 #' @export
 cum_den_df <- function(bio_df) {
-  processed_data_path <- "/capstone/coastalconservation/data/processed"
-  marine_site_path <- file.path(processed_data_path, "marine_site_segments.csv")
-  marine_site_segments <- read_csv(marine_site_path)
-
   bio_df <- bio_df %>%
-    left_join(
-      marine_site_segments %>%
-        select(marine_site_name, coastline_m)
+    filter(
+      state_province == "California",
+      collection_source != "point contact"
     ) %>%
-    filter(state_province == "California") %>%
-    # Filter out point contact entries
-    filter(collection_source != "point contact") %>%
-    # Create a 5-year bin variable
-    mutate(year_bin = paste0(
-      floor(year / 5) * 5,
-      "-",
-      floor(year / 5) * 5 + 4
-    )) %>%
-    mutate(year_bin = as.factor(year_bin)) %>%
-    # Group by species and 5-year bin
-    group_by(species_lump, year_bin) %>%
-    # Arrange by coastline distance
-    arrange(coastline_m, .by_group = TRUE) %>%
-    # Calculate cumulative and normalized density
     mutate(
-      cum_den = cumsum(density_per_m2),
-      cum_den_norm = cum_den / max(cum_den, na.rm = TRUE),
+      year_bin = paste0(
+        floor(year / 5) * 5, "-",
+        floor(year / 5) * 5 + 4
+      ),
+      year_bin = as.factor(year_bin)
     ) %>%
-    # Select relevant columns
-    select(
-      cum_den, cum_den_norm, coastline_m, year,
-      state_province, year_bin, species_lump
+    group_by(species_lump, marine_site_name, coastline_m, year_bin) %>%
+    summarise(
+      mean_density = mean(density_per_m2, na.rm = TRUE),
+      .groups = "drop"
     )
-  return(bio_df)
+
+  # Create complete grid of coastline_m and year_bin for each species
+  full_grid <- expand.grid(
+    species_lump = unique(bio_df$species_lump),
+    year_bin = unique(bio_df$year_bin),
+    coastline_m = sort(unique(bio_df$coastline_m))
+  ) %>%
+    as_tibble()
+
+  # Join and fill missing densities with 0
+  bio_df_full <- full_grid %>%
+    left_join(bio_df, by = c("species_lump", "year_bin", "coastline_m")) %>%
+    mutate(mean_density = replace_na(mean_density, 0)) %>%
+    arrange(species_lump, year_bin, coastline_m) %>%
+    group_by(species_lump, year_bin) %>%
+    mutate(
+      cum_den = cumsum(mean_density),
+      cum_den_norm = cum_den / max(cum_den, na.rm = TRUE)
+    ) %>%
+    select(
+      cum_den, cum_den_norm, coastline_m,
+      year_bin, species_lump
+    )
+
+  return(bio_df_full)
 }
+
