@@ -21,11 +21,7 @@ library(tidyr) # Data tidying
 library(purrr) # Functional programming tools
 library(ggplot2) # Plotting
 library(mgcv) # Generalized Additive Models
-
-# Load data-cleaning and analysis functions
-source(here("scripts", "functions", "cumulative_density_dataframe.R"))
-
-
+library(scales)
 ```
 
 ## Read data
@@ -33,15 +29,13 @@ source(here("scripts", "functions", "cumulative_density_dataframe.R"))
 # Source cleaning function
 source(here("scripts", "functions", "clean_biodiv.R"))
 source(here("scripts", "functions", "cumulative_density_dataframe.R"))
-source(here("scripts", "functions", "range_extent_prediction.R"))
+source(here("scripts", "functions", "historic_range_trends.R"))
 source(here("scripts", "functions", "cumulative_density_graph.R"))
-```
-
-```{r}
 # Load data
 species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
-marine_path <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv") # Load processed datasets
+marine_sites <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv") # Load processed datasets
 processed_data_path <- "/capstone/coastalconservation/data/processed"
+
 biodiv_df <- read_csv(
     file.path(
         processed_data_path,
@@ -51,60 +45,78 @@ biodiv_df <- read_csv(
 )
 ```
 
-## Macron lividus
-```{r}
-# max latitude ever
-biodiv_df %>%
-    filter(
-        species_lump == "Macron lividus",
-        (density_per_m2 > 0 | total_count > 0)
-    ) %>%
-    pull(latitude) %>%
-    max()
-
-# Roperia poulsoni has Northern Range edge in Southern Dangermond
-
-range_trend("Macron lividus")
-```
 
 ```{r}
 dangermond_boundary_species <- species_extent %>%
     filter(str_detect(southern_extent_name, "Point Conception") |
-        str_detect(northern_extent_name, "Point Conception"))
+        str_detect(northern_extent_name, "Point Conception") |
+        str_detect(northern_extent_name, "Point Mugu"))
 ```
 
 Northern
 ```{r}
 northern_boundary_species <- dangermond_boundary_species %>%
     filter(
-        northern_extent_name == "Southern Point Conception"
+        str_detect(northern_extent_name, "Point Conception") |
+            northern_extent_name == "Point Mugu"
     ) %>%
     pull(species_lump)
+```
+
+```{r}
+northern_boundary_species
 ```
 
 Southern
 ```{r}
 southern_boundary_species <- dangermond_boundary_species %>%
     filter(
-        southern_extent_name == "Northern Point Conception"
+        str_detect(southern_extent_name, "Point Conception")
     ) %>%
     pull(species_lump)
 ```
 
 ```{r}
+southern_boundary_species
+```
+
+```{r}
+Reduce(intersect, list(northern_boundary_species, southern_boundary_species))
+```
+
+Opalia wroblewskyi is in both
+```{r}
 northern_trends_df <- map_dfr(
-    northern_boundary_species,
-    function(species_name) {
-        result <- range_trend(species_name)
-        tibble(
-            species = species_name,
-            north_trend_positive = unname(result$n_bound_pos_trend),
-            n_trend_rate = unname(result$n_trend_rate), 
-            r_squared = unname(result$n_r_squared),
-            p_val = unname(result$n_p_val)
-        )
+  northern_boundary_species,
+  function(species_name) {
+    result <- tryCatch(
+      range_trend(species_name),
+      error = function(e) {
+        warning(paste("Failed to compute range_trend for", species_name, ":", e$message))
+        return(NULL)
+      }
+    )
+
+    if (is.null(result)) {
+      return(tibble(
+        species = species_name,
+        north_trend_positive = NA,
+        n_trend_rate = NA,
+        r_squared = NA,
+        p_val = NA
+      ))
     }
+
+    tibble(
+      species = species_name,
+      north_trend_positive = unname(result$n_bound_pos_trend),
+      n_trend_rate = unname(result$n_trend_rate),
+      r_squared = unname(result$n_r_squared),
+      p_val = unname(result$n_p_val)
+    )
+  }
 )
+
 ```
 
 ```{r}
@@ -112,18 +124,53 @@ northern_trends_df %>% View()
 ```
 
 ```{r}
+northern_trends_df %>%
+    filter(
+        # north_trend_positive == TRUE,
+        n_trend_rate > 1000,
+    ) %>%
+    pull(species)
+```
+
+[1] "Agathistoma eiseni"   "Aplysia californica"  "Haminoea vesicula"   
+[4] "Norrisia norrisii"    "Paraxanthias taylori" "Roperia poulsoni"    
+[7] "Tegula aureotincta"  
+
+```{r}
+range_plot("Norrisia norrisii")
+range_trend("Norrisia norrisii")
+```
+
+```{r}
 southern_trends_df <- map_dfr(
-    southern_boundary_species,
-    function(species_name) {
-        result <- range_trend(species_name)
-        tibble(
-            species = species_name,
-            north_trend_positive = unname(result$s_bound_pos_trend),
-            n_trend_rate = unname(result$s_trend_rate),
-            r_squared = unname(result$s_r_squared),
-            p_val = unname(result$s_p_val)
-        )
+  southern_boundary_species,
+  function(species_name) {
+    result <- tryCatch(
+      range_trend(species_name),
+      error = function(e) {
+        warning(paste("Failed to compute range_trend for", species_name, ":", e$message))
+        return(NULL)
+      }
+    )
+
+    if (is.null(result)) {
+      return(tibble(
+        species = species_name,
+        north_trend_positive = NA,
+        n_trend_rate = NA,
+        r_squared = NA,
+        p_val = NA
+      ))
     }
+
+    tibble(
+      species = species_name,
+      north_trend_positive = unname(result$n_bound_pos_trend),
+      n_trend_rate = unname(result$n_trend_rate),
+      r_squared = unname(result$n_r_squared),
+      p_val = unname(result$n_p_val)
+    )
+  }
 )
 ```
 
@@ -131,66 +178,29 @@ southern_trends_df <- map_dfr(
 southern_trends_df %>% View()
 ```
 
-## Matteo
-ˆ
-
-### Using density per meter squared
 ```{r}
-# Northern Range Edge (2000-2024)
-biodiv_df %>%
+southern_trends_df %>%
     filter(
-        species_lump == "Tegula aureotincta",
-        latitude > 32.53 & latitude < 35.88
-    ) %>% # Northern Range Edge
-    ggplot(aes(x = density_per_m2)) +
-    stat_ecdf(geom = "step") +
-    labs(title = "Empirical Cumulative Distribution Function") +
-    theme_bw()
-
-# Every 5 years
-biodiv_df %>%
-    filter(
-        species_lump == "Tegula aureotincta",
-        latitude > 32.53 & latitude < 35.88
-    ) %>% # Northern Range Edge
-    mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
-    ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
-    stat_ecdf(geom = "step") +
-    labs(
-        title = "Empirical Cumulative Distribution Function",
-        color = "5 year period"
-    ) +
-    theme_bw()
-
-# facet by year bin
-biodiv_df %>%
-    filter(
-        species_lump == "Tegula aureotincta",
-        latitude > 32.53 & latitude < 35.88
-    ) %>% # Northern Range Edge
-    mutate(year_bin = paste0(floor(year / 5) * 5, "-", floor(year / 5) * 5 + 4)) %>%
-    ggplot(aes(x = density_per_m2, color = as.factor(year_bin))) +
-    stat_ecdf(geom = "step") +
-    labs(
-        title = "Empirical Cumulative Distribution Function",
-        color = "5 year period"
-    ) +
-    facet_wrap(~year_bin) +
-    theme_bw()
+        # north_trend_positive == TRUE,
+        n_trend_rate > 1000,
+    ) %>%
+    pull(species)
 ```
 
-### Using cumden norm
-```{r}
-northern_cum_den %>%
-    filter(species_lump == "Tegula aureotincta") %>%
-    ggplot(aes(x = cum_den_norm)) +
-    stat_ecdf(geom = "step", na.rm = TRUE) +
-    labs(title = "Empirical Cumulative Distribution Function") +
-    theme_bw()
-```
+[1] "Acmaea mitra"                            
+[2] "Amphissa columbiana"                     
+[3] "Calliostoma annulatum"                   
+[4] "Calliostoma ligatum"                     
+[5] "Cirolana spp/Gnorimosphaeroma oregonense"
+[6] "Coryphella trilineata"                   
+[7] "Cryptochiton stelleri"                   
+[8] "Onchidella carpenteri"                   
+[9] "Tegula brunnea"   
 
 
 ```{r}
-roperia_range <- range_extent_df("Roperia poulsoni")
-range_extent_plot(roperia_range)
+ggsave(
+    "outputs/figures/range_trends/gnoore.png",
+    range_plot("Cirolana spp/Gnorimosphaeroma oregonense")
+)
 ```
