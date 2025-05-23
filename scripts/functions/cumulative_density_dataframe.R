@@ -29,6 +29,10 @@
 #' @import dplyr
 #' @export
 cum_den_df <- function(bio_df) {
+  library(dplyr)
+  library(tidyr)
+
+  # Filter relevant data and create year bins
   bio_df <- bio_df %>%
     filter(
       state_province == "California",
@@ -47,7 +51,7 @@ cum_den_df <- function(bio_df) {
       .groups = "drop"
     )
 
-  # Create complete grid of coastline_m and year_bin for each species
+  # Create a complete grid of species x year_bin x coastline_m
   full_grid <- expand.grid(
     species_lump = unique(bio_df$species_lump),
     year_bin = unique(bio_df$year_bin),
@@ -55,7 +59,7 @@ cum_den_df <- function(bio_df) {
   ) %>%
     as_tibble()
 
-  # Join and fill missing densities with 0
+  # Join with observed data and compute cumulative and normalized densities
   bio_df_full <- full_grid %>%
     left_join(bio_df, by = c("species_lump", "year_bin", "coastline_m")) %>%
     mutate(mean_density = replace_na(mean_density, 0)) %>%
@@ -65,11 +69,22 @@ cum_den_df <- function(bio_df) {
       cum_den = cumsum(mean_density),
       cum_den_norm = cum_den / max(cum_den, na.rm = TRUE)
     ) %>%
+    # Add a row at coastline_m = 0 for plotting (to anchor curves at 0)
+  group_modify(~ {
+    .x <- add_row(.x,
+      cum_den = 0, cum_den_norm = 0, coastline_m = 0, .before = 1)
+    .x <- add_row(.x,
+      cum_den = 1, cum_den_norm = 1,
+      coastline_m = max(.x$coastline_m, na.rm = TRUE),
+      .after = nrow(.x))
+    .x
+  }) %>%
+    ungroup() %>%
     select(
-      cum_den, cum_den_norm, coastline_m,
-      year_bin, species_lump
+      species_lump, year_bin, coastline_m, cum_den, cum_den_norm
     )
 
   return(bio_df_full)
 }
+
 

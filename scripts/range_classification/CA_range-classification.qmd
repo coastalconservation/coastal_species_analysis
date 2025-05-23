@@ -211,7 +211,7 @@ marine_sites <- marine_sites %>%
   )
 
 # View sites
-marine_sites %>% View()
+head(marine_sites)
 ```
 
 ### Write to CSV
