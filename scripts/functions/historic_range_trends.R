@@ -154,8 +154,6 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
   species_extent_df <- species_pred %>%
     group_by(year_bin) %>%
     summarise(
-      max_cdn = max(cum_den_norm, na.rm = TRUE),
-      min_cdn = min(cum_den_norm, na.rm = TRUE),
       year_floor = as.integer(substr(first(year_bin), 1, 4)),
       # FIXED: North boundary should be at higher coastline values (95th percentile)
       # South boundary should be at lower coastline values (5th percentile)
