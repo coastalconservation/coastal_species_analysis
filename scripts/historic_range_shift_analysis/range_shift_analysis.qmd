@@ -81,11 +81,6 @@ southern_boundary_species
 ```
 
 ```{r}
-Reduce(intersect, list(northern_boundary_species, southern_boundary_species))
-```
-
-Opalia wroblewskyi is in both
-```{r}
 northern_trends_df <- map_dfr(
   northern_boundary_species,
   function(species_name) {
@@ -137,8 +132,8 @@ northern_trends_df %>%
 [7] "Tegula aureotincta"  
 
 ```{r}
-range_plot("Norrisia norrisii")
-range_trend("Norrisia norrisii")
+range_plot("Agathistoma eiseni")
+range_trend("Agathistoma eiseni")
 ```
 
 ```{r}
@@ -165,10 +160,10 @@ southern_trends_df <- map_dfr(
 
     tibble(
       species = species_name,
-      north_trend_positive = unname(result$n_bound_pos_trend),
-      n_trend_rate = unname(result$n_trend_rate),
-      r_squared = unname(result$n_r_squared),
-      p_val = unname(result$n_p_val)
+      north_trend_positive = unname(result$s_bound_pos_trend),
+      n_trend_rate = unname(result$s_trend_rate),
+      r_squared = unname(result$s_r_squared),
+      p_val = unname(result$s_p_val)
     )
   }
 )
@@ -187,15 +182,9 @@ southern_trends_df %>%
     pull(species)
 ```
 
-[1] "Acmaea mitra"                            
-[2] "Amphissa columbiana"                     
-[3] "Calliostoma annulatum"                   
-[4] "Calliostoma ligatum"                     
-[5] "Cirolana spp/Gnorimosphaeroma oregonense"
-[6] "Coryphella trilineata"                   
-[7] "Cryptochiton stelleri"                   
-[8] "Onchidella carpenteri"                   
-[9] "Tegula brunnea"   
+[1] "Calliostoma annulatum"     "Calliostoma canaliculatum"
+[3] "Diodora aspera"            "Henricia spp"             
+[5] "Onchidella carpenteri"     "Tegula brunnea" 
 
 
 ```{r}
