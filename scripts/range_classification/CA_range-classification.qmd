@@ -3,6 +3,22 @@ title: "CA_range-classification"
 format: html
 ---
 
+```{r}
+library(tidyverse)
+library(stringr)
+```
+
+```{r}
+source(here::here('scripts', 'functions', 'clean_biodiv.R'))
+
+# Write data
+processed_data_path <- "/capstone/coastalconservation/data/processed"
+write_csv(
+  clean_biodiv(),
+  file.path(processed_data_path, "clean_biodiv_2025.csv")
+)
+```
+
 this is where were going to explain our script
 
 
@@ -12,31 +28,386 @@ this is where were going to explain our script
 
 what, where? 
 
-## Function
+## Scripts
 
 who, what, analysis?
 
+
+## California Segment Classification
+
+In ArcGIS, we iteratavely measured points along the coastline in 100 km segments. We began at Point Conception and ran both north and south until the Oregon and Mexico border, respectively. We then wrote the resulting points as latitude and longitude in the ```CA_coast_021425.csv``` file. Our first script, ```ca_segment_classification.R``` takes ```CA_coast_021425.csv``` and classify the area betwen these points. This is what we refer to as our segmentation strategy. Each segment will be named and defined in such a way that a site or species can easily be defined within it.
+
+The whole script is available in ```ca_segment_classification.R```, however we will walk through each part below.
+
+
+### Initialize File Paths
+
+We initalize the file path to increase readability. 
 ```{r}
-source(here::here('scripts', 'functions', 'clean_biodiv.R'))
-source(here::here('scripts', 'functions', 'buffer_classification.R'))
-source(here::here('scripts', 'functions', 'range_classification.R'))
+# Initialize file paths
+raw_data_path <- "/capstone/coastalconservation/data/raw"
+coast_segments_path <- "spatial_data/ca_segments/CA_coast_021425.csv"
+segment_path <- file.path(raw_data_path, coast_segments_path)
 ```
 
+### Load and clean Data
 
+We then use this path to load the data. After loading, we rename the columns to more descriptive titles. Then we reverse the segment id numbers to go from south to north, as in the original dataframe they run from north to south. Lastly, we select the two columns most pertinent to our analysis, segment_id and its coastline latitude.
+
+```{r}
+# Load and clean data
+ca_segments <- read_csv(segment_path) %>%
+  rename(
+    # Rename columns
+    segment_id = OID_,
+    latitude = POINT_Y
+  ) %>%
+  # Order from south to north
+  mutate(
+    segment_id = rev(segment_id)
+  ) %>%
+  select(segment_id, latitude)
+```
+
+### Define the Coastline Segments
+
+We treat each point as the southern most point in a segment's existence. As such, we refine latitude to be its minimum latitude, and the next latitude in order to be its max. Now we have defined each coastline segment by its maximum and minimum latitude.
+
+```{r}
+ca_segments <- ca_segments %>%
+  # Find min and max latitude for each segment
+  rename(
+    min_latitude = latitude
+  ) %>%
+  mutate(
+    max_latitude = lead(min_latitude, order_by = segment_id)
+  ) %>%
+  # Drop unused segment
+  filter(segment_id != 19)
+```
+
+### Label Coastline Segment
+
+With the coastline segment boundaries clearly defined, we label each segment basee off of their most geographically/culturally distinct landmarks. 
+
+```{r}
+# Declare names for each segment
+segment_names <- c(
+  "1" = "Baja",
+  "2" = "Chula Vista",
+  "3" = "North County/San Diego",
+  "4" = "LA/Orange County",
+  "5" = "Point Mugu",
+  "6" = "Southern Point Conception",
+  "7" = "Northern Point Conception",
+  "8" = "Morro Bay",
+  "9" = "Big Sur",
+  "10" = "Monterey Bay",
+  "11" = "San Francisco",
+  "12" = "Point Reyes",
+  "13" = "Bodega Bay",
+  "14" = "Fort Bragg",
+  "15" = "Humbolt",
+  "16" = "Eureka",
+  "17" = "Crescent City",
+  "18" = "Pacific North West"
+)
+
+# Apply segment names to each row
+ca_segments$segment_name <- segment_names[as.character(ca_segments$segment_id)]
+```
+
+### Write Data
+
+The coastline segments are now clearly geographically defined and labeled. They can be written to our processed folder for future use.
+
+```{r}
+# Write data
+processed_data_path <- "/capstone/coastalconservation/data/processed/"
+write_csv(ca_segments,
+          file.path(processed_data_path, "ca_segments.csv"))
+
+```
+
+## Marine Site Categorization
+
+With the coastline segments now defined, we may begin to categorize each MARINe site into a segment.
+
+The whole script is available in ```marine_sites.R```, however we will walk through each part below.
+
+### Load libraries and data
+
+First we must read in the data 
+
+```{r}
+# Source the cleaned MARINe data function
+source(here::here("scripts", "functions", "clean_biodiv.R"))
+
+# Initialize file paths
+raw_data_path <- "/capstone/coastalconservation/data/raw/"
+processed_data_path <- "/capstone/coastalconservation/data/processed/"
+site_csv_path <- "spatial_data/marine_sites_distance_coast.csv"
+
+marine_site_distance_path <- file.path(raw_data_path, site_csv_path)
+ca_segment_path <- file.path(processed_data_path, "ca_segments.csv")
+
+# Read in data
+marine_site_distance <- read_csv(marine_site_distance_path)
+ca_segments <- read_csv(ca_segment_path)
+biodiv_df <- clean_biodiv()
+```
+
+### Join the two datasets
+
+We first extract only the marine sites and their locations from the biodiversity dataset. Then we can join using the marine_site_distance dataframe on their name. We also add the coastline_m variable. This variable tells us how far on the coastline (in m) we are from the southern California border.
+
+```{r}
+# Filter and join MARINe sites with coastline distance
+marine_sites <- biodiv_df %>%
+  distinct(marine_site_name, latitude, longitude) %>%
+  left_join(
+    marine_site_distance %>%
+      select(marine_site_name, coastline_m = MEAS),
+    by = "marine_site_name"
+  )
+```
+
+### Classify marine sites to CA segment
+
+We then create a function to assign a segment_id to a marine site. We can apply this to each marine site to create a table of all the marine sites and their segment IDs.
+
+```{r}
+# Define helper function to assign segment_id based on site latitude
+assign_segment_id <- function(site_lat, segments) {
+  possible <- segments %>% 
+    filter(min_latitude <= site_lat)
+  if (nrow(possible) > 0) {
+     # choose the first/lowest possible match
+    return(possible$segment_id[1])
+  } else {
+    return(NA_real_)
+  }
+}
+
+# Apply segment assignment
+marine_sites <- marine_sites %>%
+  rowwise() %>%
+  mutate(segment_id = assign_segment_id(latitude,
+                                        ca_segments)) %>%
+  ungroup()
+```
+
+### Label Site IDs
+
+Next, we join the original segment dataframe to label each segment id and view it.
+
+```{r}
+# Join segment names
+marine_sites <- marine_sites %>%
+  left_join(
+    ca_segments %>% select(segment_id, segment_name),
+    by = "segment_id"
+  )
+
+# View sites
+head(marine_sites)
+```
+
+### Write to CSV
+
+Finally, we can write the data frame to the proper file path.
+
+```{r}
+# Save marine_sites
+write_csv(marine_sites,
+          file.path(processed_data_path,
+                    "marine_site_segments.csv"))
+
+```
+
+## Classify Species Ranges
+
+With our prelimenarly data cleaned and ready to use, we can run a script that analyzes the range of each species in our 
+
+The whole script is available in ```species_range_classificaiton.R```, however we will walk through each part below.
+
+### Load libraries and data
+
+First we must read in the data.
+
+```{r}
+# Load required libraries
+library(tidyverse)
+library(here)
+
+# Source the cleaned MARINe data function
+source(here::here("scripts", "functions", "clean_biodiv.R"))
+
+# Initialize file paths
+processed_data_path <- "/capstone/coastalconservation/data/processed"
+marine_site_path <- file.path(processed_data_path, "marine_site_segments.csv")
+
+# Read in data
+biodiv_df <- clean_biodiv()
+marine_site_segments <- read_csv(marine_site_path)
+```
+
+### Filter to Present Observations
+
+We want to filter to present obervations as these are the only places where the species has been spotted within our dataset. We use the ```total_count``` variable, which is the unit for quadrat and swath collection methods. We also use ```number_of_hits```, which is the collection method for point contact collection method. Though the poin contact data is not included in range shift analysis, this is to be as inclusive of the dataset as possible, making sure all observations are taken into account with creating this broad classification.
+```{r}
+# Filter to observations that are present
+present_observations <- biodiv_df %>%
+  # remove non values
+  filter(
+    !is.na(total_count) | !is.na(number_of_hits)
+  ) %>%
+  # only work with non zero values
+  filter(
+    total_count > 0 |
+    number_of_hits > 0
+  )
+```
+
+### Find Southernmost and Northernmost Observation
+
+The range is defined as the southernmost and northernmost point of observation. In this workflow, we find this point, then assign it to the segment ID, segment name, and coastline distance created in the previous group By grouping by the species, and slicing by the min/max latitude at which the species was seen, we can find the range in which it is observed. 
+
+```{r}
+# Find southernmost observation site
+southern_sites <- present_observations %>%
+  group_by(species_lump) %>%
+  slice_min(order_by = latitude, n = 1, with_ties = FALSE) %>%
+  select(species_lump, 
+         southern_extent_lat = latitude,
+         southern_site_name = marine_site_name)
+
+# Find northernmost observation site
+northern_sites <- present_observations %>%
+  group_by(species_lump) %>%
+  slice_max(order_by = latitude, n = 1, with_ties = FALSE) %>%
+  select(species_lump,
+         northern_extent_lat = latitude,
+         northern_site_name = marine_site_name)
+
+# Join tables to create extent
+species_extent <- southern_sites %>%
+  inner_join(northern_sites, by = "species_lump")
+
+# Add coastline distance to each extent
+species_extent <- species_extent %>%
+  # First join on southern_extent_lat (southern)
+  left_join(
+    marine_site_segments %>%
+      select(marine_site_name, segment_id,
+             segment_name, coastline_m) %>%
+      rename(
+        southern_extent_m = coastline_m
+      ),
+    join_by(southern_site_name == marine_site_name)
+  ) %>%
+  rename(
+    southern_extent_id = segment_id,
+    southern_extent_name = segment_name
+  ) %>%
+  # Second join on northern_extent_lat (northern)
+  left_join(
+    marine_site_segments %>%
+      select(marine_site_name, segment_id,
+             segment_name, coastline_m) %>%
+      rename(
+        northern_extent_m = coastline_m
+      ),
+    join_by(northern_site_name == marine_site_name)
+  ) %>%
+  rename(
+    northern_extent_id = segment_id,
+    northern_extent_name = segment_name
+  ) %>%
+  select(
+    species_lump,
+    southern_extent_lat, southern_extent_m,
+    southern_extent_id, southern_extent_name,
+    northern_extent_lat, northern_extent_m,
+    northern_extent_id, northern_extent_name
+  )
+```
+
+### Write to CSV
+
+Finally, we can write the data frame to the proper file path.
+
+```{r}
+# Write file
+species_extent_path <- file.path(processed_data_path, "species_extent.csv")
+write_csv(species_extent,
+          species_extent_path)
+
+```
 
 ## Output
 
-what, where it go?
+The output of ```ca_segment_classfication.R``` lives in "/capstone/coastalconservation/data/processed/ca_segments.csv"
+The output of ```marine_sites.R``` lives in "/capstone/coastalconservation/data/processed/marine_site_segments.csv"
+The output of ```species_range_classfication.R``` lives in "/capstone/coastalconservation/data/processed/species_extent.csv"
 
 ## Analysis
 
-use function
-
-run species_ranges.R
-
-
 ```{r}
-write_csv(clean_biodiv(), here("data","processed", "MARINe_full.csv"))
-write_csv(range_classification(), here("data","processed", "range_classification_list.csv"))
+processed_data_path <- "/capstone/coastalconservation/data/processed"
+
+marine_site_segments <- read_csv(file.path(processed_data_path, "marine_site_segments.csv"))
+
+species_extent_path <- file.path(processed_data_path, "species_extent.csv")
+species_extent <- read_csv(species_extent_path)
 ```
 
+How many sites per segment?
+```{r}
+marine_site_segments %>%
+  group_by(segment_name) %>%
+  summarise(
+    sites = n()
+  ) %>%
+  arrange(sites)
+```
+
+How many species have range boundary near Point Conception?
+```{r}
+dangermond_boundary_species <- species_extent %>% 
+  filter(str_detect(southern_extent_name, "Point Conception") |
+         str_detect(northern_extent_name, "Point Conception")
+        )
+```
+
+```{r}
+dangermond_boundary_species %>% pull(species_lump)
+```
+
+Northern
+```{r}
+dangermond_boundary_species %>% 
+  filter(
+    northern_extent_name == "Southern Point Conception"
+  ) %>%
+  pull(species_lump)
+```
+
+Southern
+```{r}
+dangermond_boundary_species %>% 
+  filter(
+    southern_extent_name == "Northern Point Conception"
+  ) %>%
+  pull(species_lump)
+```
+How many species have a range boundary in California?
+
+```{r}
+species_extent %>% 
+  filter((southern_extent_id > 1 &
+         southern_extent_id < 18) |
+         (northern_extent_id > 1 &
+         northern_extent_id < 18)
+        )
+```
