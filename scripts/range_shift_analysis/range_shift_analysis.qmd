@@ -297,12 +297,19 @@ all_boundaries_df <- map_dfr(
             south_boundary = boundaries$south_boundary
         )
     }
-)
+) %>% arrange(species)
 ```
 
 ```{r}
-result <- range_trend("Tegula aureotincta")
-result$boundaries_df
+all_boundaries_df <- all_boundaries_df %>% arrange(species) 
+saveRDS(
+    all_boundaries_df,
+    file = "/capstone/coastalconservation/data/processed/boundaries.rds"
+    )
+```
+
+```{r}
+readRDS("/capstone/coastalconservation/data/processed/boundaries.rds")
 ```
 
 ```{r}
