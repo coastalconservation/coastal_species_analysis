@@ -1,0 +1,97 @@
+---
+title: "Raster analysis"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r}
+# Load packages
+library(raster)
+library(tidyverse)
+library(here)
+```
+
+This file describes how to do the analysis Coastal Conservation did on select species who have range shifts seen in and around the Dangermond Preserve.
+
+```{r}
+# Create path to directory where rasters are stored
+base_path <- "/capstone/coastalconservation/data/processed/species_model_rasters/change_species_rasters"
+```
+
+
+```{r}
+# Create bounding box around Point Conception
+bbox_extent <- extent(-121.597681, -118.117269, 34.35797, 35.24002)
+```
+
+
+```{r}
+# Define species and range edge type
+northern_species <- c(
+  "Aplysia californica", "Haminoea vesicula", "Norrisia norrisii",
+  "Paraxanthias taylori", "Roperia poulsoni", "Tegula aureotincta"
+)
+
+southern_species <- c(
+  "Calliostoma canaliculatum", "Diodora aspera", "Henricia spp",
+  "Onchidella carpenteri", "Tegula brunnea"
+)
+```
+
+```{r}
+# Combine into data frame with range edge info
+species_df <- tibble(
+  Species = c(northern_species, southern_species),
+  Range_edge = c(rep("Northern", length(northern_species)),
+                 rep("Southern", length(southern_species)))
+)
+```
+
+```{r}
+# Create an empty tibble to store results
+results <- tibble(Species = character(), Range_edge = character(), Sum = numeric())
+```
+
+```{r}
+# Loop over each species
+for (i in 1:nrow(species_df)) {
+  species_name <- species_df$Species[i]
+  range_type <- species_df$Range_edge[i]
+
+  # Build raster path
+  raster_path <- file.path(base_path, paste0("ESDM_", gsub(" ", "_", species_name), "_change.tif"))
+
+  # Load, crop, and sum raster values
+  r <- raster(raster_path)
+  cropped <- crop(r, bbox_extent)
+  sum_val <- cellStats(cropped, stat = "sum")
+
+  # Append results
+  results <- results %>% add_row(Species = species_name, Range_edge = range_type, Sum = sum_val)
+}
+```
+
+```{r}
+# View results
+print(results)
+```
+
+```{r}
+# Count the value for northern edge and southern edge species
+edge_sums <- results %>% 
+  group_by(Range_edge) %>%
+  summarise(Total_Sum = sum(Sum))
+  
+print(edge_sums)
+```
+
+```{r}
+# Sum results for all species
+species_total_sum <- sum(results$Sum)
+
+# Print results
+print(species_total_sum)
+```
+
