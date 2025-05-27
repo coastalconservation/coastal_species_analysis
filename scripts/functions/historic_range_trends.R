@@ -226,18 +226,22 @@ range_trend <- function(species_name, biodiv_df = clean_biodiv()) {
 }
 
 
-range_plot <- function(species_name, range_results = NULL, title_prefix = "Range Boundaries for") {
+range_plot <- function(species_name, range_results = NULL, title_prefix = "Coastline Range of") {
   if (is.null(range_results)) {
     range_results <- range_trend(species_name)
   }
 
   boundaries_df <- range_results$boundaries_df
 
+  common_name <- species_names %>%
+    filter(species_lump == range_results$species) %>%
+    pull(common_name)
+
   if (is.null(boundaries_df) || nrow(boundaries_df) < 2) {
-    warning(paste("Insufficient data to plot range for:", species_name))
+    warning(paste("Insufficient data to plot range for:", common_name))
     return(
       ggplot() +
-        annotate("text", x = 0.5, y = 0.5, label = paste("Insufficient data for", species_name)) +
+        annotate("text", x = 0.5, y = 0.5, label = paste("Insufficient data for", common_name)) +
         theme_void()
     )
   }
@@ -248,13 +252,23 @@ range_plot <- function(species_name, range_results = NULL, title_prefix = "Range
       south_boundary_km = south_boundary / 1000
     )
 
-  # Create a full sequence of years and join to ensure consistent x-axis
+  # Create a full sequence of years and get corresponding year_bin labels
   all_years <- seq(min(boundaries_df_km$year_floor, na.rm = TRUE),
     max(boundaries_df_km$year_floor, na.rm = TRUE),
     by = 5
   )
+
+  # Get unique year_bin for each year_floor
+  year_labels_df <- boundaries_df %>%
+    select(year_floor, year_bin) %>%
+    distinct() %>%
+    filter(year_floor %in% all_years)
+
+  # Rebuild with consistent x-axis values
   boundaries_df_km <- tibble(year_floor = all_years) %>%
-    left_join(boundaries_df_km, by = "year_floor")
+    left_join(boundaries_df_km, by = "year_floor") %>%
+    left_join(year_labels_df, by = "year_floor")
+
 
   # Calculate padded y-axis limits safely
   y_min_km <- min(boundaries_df_km$south_boundary_km, na.rm = TRUE)
@@ -273,24 +287,41 @@ range_plot <- function(species_name, range_results = NULL, title_prefix = "Range
       aes(xend = year_floor, y = north_boundary_km, yend = south_boundary_km),
       color = "grey50", size = 5, alpha = 0.7
     ) +
-    geom_point(aes(y = north_boundary_km), color = "#349546", size = 10, na.rm = TRUE) +
-    geom_point(aes(y = south_boundary_km), color = "#00291f", size = 10, na.rm = TRUE) +
+    geom_point(
+      aes(y = north_boundary_km), color = "#349546", size = 10, na.rm = TRUE
+      ) +
+    geom_point(
+      aes(y = south_boundary_km), color = "#00291f", size = 10, na.rm = TRUE
+      ) +
     labs(
-      title = paste(title_prefix, species_name),
+      title = paste(title_prefix, common_name),
       y = "Coastline Position (km)"
     ) +
     theme_minimal(base_size = 18) +
     theme(
-      plot.title = element_text(face = "bold", size = 24, hjust = 0.5),
+      plot.title = element_text(face = "bold", size = 20, hjust = 0.5),
       panel.grid.minor = element_blank(),
       panel.grid.major = element_line(color = "gray90"),
-      axis.title = element_text(face = "bold"),
-      axis.title.x = element_blank(),
-      axis.title.y = element_text(margin = margin(r = 10), face = "bold", size = 18),
-      axis.text = element_text(size = 16)
+      axis.title = element_blank(),
+      axis.text.x = element_text(
+        angle = 45, vjust = .5
+        ),
+      # axis.title.y = element_text(
+      #    margin = margin(r = 20), face = "bold", size = 24
+      #   ),
+      axis.text = element_text(size = 18, face = "bold", hjust = 0.5),
+      plot.margin = margin(t = 10, r = 40, b = 10, l = 10),
     ) +
-    scale_y_continuous(limits = c(y_min_km - y_padding_km, y_max_km + y_padding_km)) +
-    scale_x_continuous(breaks = all_years, limits = range(all_years))
+    scale_y_continuous(
+      limits = c(y_min_km - y_padding_km, y_max_km + y_padding_km),
+      label = scales::label_number(suffix = "km")
+    ) +
+    scale_x_continuous(
+      breaks = year_labels_df$year_floor,
+      labels = year_labels_df$year_bin,
+      limits = range(all_years)
+    )
+
 
   # Add warning subtitle if needed
   if (!isTRUE(range_results$n_reasonable) || !isTRUE(range_results$s_reasonable)) {
