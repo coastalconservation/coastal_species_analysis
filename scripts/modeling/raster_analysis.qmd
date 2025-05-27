@@ -11,6 +11,16 @@ editor_options:
 library(raster)
 library(tidyverse)
 library(here)
+
+source(here::here('scripts', 'functions', 'percent_suit_change.R'))
+```
+
+```{r}
+percent_suit_change(northern_species)
+```
+
+```{r}
+percent_suit_change(southern_species)
 ```
 
 This file describes how to do the analysis Coastal Conservation did on select species who have range shifts seen in and around the Dangermond Preserve.
@@ -43,7 +53,7 @@ southern_species <- c(
 ```{r}
 # Combine into data frame with range edge info
 species_df <- tibble(
-  Species = c(northern_species, southern_species),
+  species_lump = c(northern_species, southern_species),
   Range_edge = c(rep("Northern", length(northern_species)),
                  rep("Southern", length(southern_species)))
 )
@@ -57,7 +67,7 @@ results <- tibble(Species = character(), Range_edge = character(), Sum = numeric
 ```{r}
 # Loop over each species
 for (i in 1:nrow(species_df)) {
-  species_name <- species_df$Species[i]
+  species_name <- species_df$species_lump[i]
   range_type <- species_df$Range_edge[i]
 
   # Build raster path
