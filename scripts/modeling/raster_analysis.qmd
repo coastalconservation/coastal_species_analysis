@@ -11,16 +11,17 @@ editor_options:
 library(raster)
 library(tidyverse)
 library(here)
+library(terra)
 
 source(here::here('scripts', 'functions', 'percent_suit_change.R'))
 ```
 
 ```{r}
-percent_suit_change(northern_species)
+#percent_suit_change(northern_species)
 ```
 
 ```{r}
-percent_suit_change(southern_species)
+#percent_suit_change(southern_species)
 ```
 
 This file describes how to do the analysis Coastal Conservation did on select species who have range shifts seen in and around the Dangermond Preserve.
@@ -65,6 +66,11 @@ results <- tibble(Species = character(), Range_edge = character(), Sum = numeric
 ```
 
 ```{r}
+library(terra)
+
+# Initialize empty results table
+results <- tibble(Species = character(), Range_edge = character(), Sum = numeric())
+
 # Loop over each species
 for (i in 1:nrow(species_df)) {
   species_name <- species_df$species_lump[i]
@@ -73,10 +79,14 @@ for (i in 1:nrow(species_df)) {
   # Build raster path
   raster_path <- file.path(base_path, paste0("ESDM_", gsub(" ", "_", species_name), "_change.tif"))
 
-  # Load, crop, and sum raster values
-  r <- raster(raster_path)
+  # Load raster with terra
+  r <- rast(raster_path)
+
+  # Crop to bounding box
   cropped <- crop(r, bbox_extent)
-  sum_val <- cellStats(cropped, stat = "sum")
+
+  # Sum values (exclude NAs)
+  sum_val <- global(cropped, fun = "sum", na.rm = TRUE)[1, 1]
 
   # Append results
   results <- results %>% add_row(Species = species_name, Range_edge = range_type, Sum = sum_val)
@@ -84,9 +94,9 @@ for (i in 1:nrow(species_df)) {
 ```
 
 ```{r}
-# View results
-print(results)
+results
 ```
+
 
 ```{r}
 # Count the value for northern edge and southern edge species
@@ -103,5 +113,119 @@ species_total_sum <- sum(results$Sum)
 
 # Print results
 print(species_total_sum)
+```
+```{r}
+# Define raster directories
+current_dir <- "/capstone/coastalconservation/data/processed/species_model_rasters/current_species_rasters"
+future_dir  <- "/capstone/coastalconservation/data/processed/species_model_rasters/projected_species_rasters"
+
+# List filenames (not full paths)
+current_files <- list.files(current_dir, pattern = "^current_.*\\.tif$", full.names = FALSE)
+future_files  <- list.files(future_dir,  pattern = "^projected_.*\\.tif$", full.names = FALSE)
+
+# Extract species names from filenames
+current_species <- gsub("^current_(.*)\\.tif$", "\\1", current_files)
+future_species  <- gsub("^projected_(.*)\\.tif$", "\\1", future_files)
+
+# Keep only species that exist in both current and projected
+valid_species <- intersect(current_species, future_species)
+
+# Create full paths for those rasters
+current_paths <- file.path(current_dir, paste0("current_", valid_species, ".tif"))
+future_paths  <- file.path(future_dir,  paste0("projected_", valid_species, ".tif"))
+
+# Stack rasters
+current_stack <- stack(current_paths)
+future_stack  <- stack(future_paths)
+
+# Sum cell values across all rasters
+total_current <- cellStats(current_stack, stat = "sum", na.rm = TRUE) %>% sum()
+total_future  <- cellStats(future_stack,  stat = "sum", na.rm = TRUE) %>% sum()
+
+# Calculate percent change
+if (total_current == 0) {
+  cumulative_percent_change <- NA
+} else {
+  cumulative_percent_change <- ((total_future - total_current) / total_current) * 100
+}
+
+# Print result
+print(paste0("Cumulative percent change over all species: ", round(cumulative_percent_change, 4), "%"))
+```
+
+```{r}
+# Define species list (use species names with spaces)
+species_subset <- northern_species
+
+# Define raster directories
+current_dir <- "/capstone/coastalconservation/data/processed/species_model_rasters/current_species_rasters"
+future_dir  <- "/capstone/coastalconservation/data/processed/species_model_rasters/projected_species_rasters"
+
+bbox_extent <- extent(-121.597681, -118.117269, 34.35797, 35.24002)
+
+# Convert species names to file-safe format
+species_safe <- gsub(" ", "_", species_subset)
+
+# Create full paths for current and future rasters
+current_paths <- file.path(current_dir, paste0("current_", species_safe, ".tif"))
+future_paths  <- file.path(future_dir,  paste0("projected_", species_safe, ".tif"))
+
+# Stack valid rasters
+current_stack <- stack(current_paths)
+future_stack  <- stack(future_paths)
+
+current_stack <- crop(current_stack, bbox_extent)
+future_stack <- crop(future_stack, bbox_extent)
+
+# Sum values for each layer, then total across stack
+total_current <- cellStats(current_stack, stat = "sum", na.rm = TRUE) %>% 
+  sum()
+total_future  <- cellStats(future_stack,  stat = "sum", na.rm = TRUE) %>% 
+  sum()
+
+# Calculate cumulative percent change
+if (total_current == 0) {
+  cumulative_percent_change <- NA
+} else {
+  cumulative_percent_change <- ((total_future - total_current) / total_current) * 100
+}
+
+# Print result
+print(paste0("Cumulative percent change for subset: ", round(cumulative_percent_change, 2), "%"))
+```
+```{r}
+plot(future_stack)
+```
+```{r}
+# Create plot for future habit for all species with northern range edges
+north_edge_fut <- sum(future_stack)
+```
+
+```{r}
+tmap_mode("view")  # use "view" for interactive
+tm_shape(north_edge_fut) +
+  tm_raster(style = "cont", palette = "viridis", title = "Future Suitability") +
+  tm_basemap("Esri.WorldStreetMap") +
+  tm_layout(main.title = "Cumulative Suitability (Future)", legend.outside = TRUE)
+```
+
+```{r}
+# Create plot for current habit for all species with northern range edges
+north_edge_cur <- sum(current_stack)
+```
+
+```{r}
+tmap_mode("view")  # use "view" for interactive
+tm_shape(north_edge_cur) +
+  tm_raster(style = "cont", palette = "viridis", title = "Future Suitability") +
+  tm_basemap("Esri.WorldStreetMap") +
+  tm_layout(main.title = "Cumulative Suitability (Future)", legend.outside = TRUE)
+```
+```{r}
+north_change <- north_edge_fut - north_edge_cur
+```
+
+```{r}
+plot(north_change)
 ```
 

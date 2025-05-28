@@ -2,7 +2,7 @@
 title: "Range Shift Analysis"
 format: html
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ## Load packages
@@ -30,7 +30,6 @@ library(scales)
 source(here("scripts", "functions", "clean_biodiv.R"))
 source(here("scripts", "functions", "cumulative_density_dataframe.R"))
 source(here("scripts", "functions", "historic_range_trends.R"))
-source(here("scripts", "functions", "cumulative_density_graph.R"))
 # Load data
 species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
 marine_sites <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv") # Load processed datasets
@@ -79,6 +78,7 @@ southern_boundary_species <- dangermond_boundary_species %>%
 ```{r}
 southern_boundary_species
 ```
+Add tidyverse select
 
 ```{r}
 northern_trends_df <- map_dfr(
