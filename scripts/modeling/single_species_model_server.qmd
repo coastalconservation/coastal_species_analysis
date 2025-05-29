@@ -156,7 +156,7 @@ Opalia wroblewskyi\*
 
 ```{r}
 # Create rasters and show plots
-single_species_model('Pelvetiopsis arborescens/limitata')
+single_species_model('Calliostoma canaliculatum')
 ```
 
 ## Load Raster Data

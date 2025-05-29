@@ -116,8 +116,10 @@ single_species_model <- function(species){
   # Input data includes species presence/absence and historical environmental layers
   # `Pcol` specifies the binary occurrence column; `Xcol` and `Ycol` are spatial coordinates
   # Algorithms used: GBM, GAM, GLM, MARS, CTA, ANN, RF, SVM (MAXENT was excluded for this run)
+  # Some species with less observations only worked without the gbm
+  'GBM'
   ESDM <- ensemble_modelling(
-    c('GBM','GAM','GLM','MARS','CTA','ANN','RF','SVM'), 
+    c('GAM','GLM','MARS','CTA','ANN','RF','SVM'), 
     species_subset, 
     env_00_load, 
     Xcol = 'longitude', 

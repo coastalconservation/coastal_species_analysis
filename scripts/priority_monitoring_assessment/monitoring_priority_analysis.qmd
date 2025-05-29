@@ -1,0 +1,154 @@
+---
+title: "Monitoring_priority_analysis"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+This file walks through how we combined data sets to create the monitorying priority list. Each species is given a monitoring priority based on three criteria: 1. Whether they have a range edge within point conception, 2. Whether they are showing a range shift trend, 3. Whether the percentage of habitat suitability is going up or down within point conception. 
+
+```{r}
+# Load packages
+library(tidyverse)
+library(dplyr)
+```
+
+```{r}
+# Load files 
+raster_stats <- read.csv('/capstone/coastalconservation/data/processed/analyses_results/species_suitability_change.csv')
+ntrend_stats <- read.csv('/capstone/coastalconservation/data/processed/ntrends_stats.csv')
+strend_stats <- read.csv('/capstone/coastalconservation/data/processed/strends_stats.csv')
+```
+
+## Cleaning and combining ntrend_stats and strend_stats
+
+```{r}
+# Filter to only species moving north
+north_edge_trends <- ntrend_stats %>% 
+  select(species, north_trend_positive) %>% 
+  filter(north_trend_positive == TRUE)
+```
+
+```{r}
+# Filter to only species moving northern
+south_edge_trends <- strend_stats %>% 
+  select(species, north_trend_positive) %>% 
+  filter(north_trend_positive == TRUE)
+```
+
+```{r}
+# Combine data frames
+species_trends <- rbind(south_edge_trends, north_edge_trends)
+```
+
+```{r}
+# Rename species column to species_lump
+species_trends <- species_trends %>% 
+  rename(species_lump = species)
+```
+
+## Cleaning raster_stats
+
+```{r}
+raster_stats_clean <- raster_stats %>% 
+  select(species_name, percent_change_dangermond) %>% 
+  rename(species_lump = species_name)
+```
+
+## Creating a data frame that describes which species has northern or southern range boundaries
+
+```{r}
+# Northern edge species
+northern_species <- c(
+  "Acanthinucella paucilirata", "Acrosorium spp", "Aplysia californica",
+  "Bugula neritina", "Chondria arcuata", "Chondria dasyphylla",
+  "Dictyota coriacea", "Gastroclonium parvum", "Haminoea vesicula",
+  "Jania rosea", "Laurencia spp", "Macron lividus",
+  "Nemalion elminthoides", "Norrisia norrisii", "Opalia wroblewskyi",
+  "Paraxanthias taylori", "Pseudochama exogyra", "Pseudomelatoma penicillata",
+  "Roperia poulsoni", "Sargassum agardhianum", "Taonia lennebackerae",
+  "Tegula aureotincta", "Zonaria farlowii"
+)
+
+# Southern edge species
+southern_species <- c(
+  "Acmaea mitra", "Aglaophenia spp", "Ahnfeltiopsis linearis",
+  "Amphissa columbiana", "Analipus japonicus", "Calliostoma annulatum",
+  "Calliostoma canaliculatum", "Calliostoma ligatum", "Chone minuta",
+  "Cirolana spp/Gnorimosphaeroma oregonense", "Coryphella trilineata",
+  "Cryptochiton stelleri", "Cryptosiphonia woodii", "Derbesia marina",
+  "Desmarestia ligulata", "Dilsea californica", "Diodora aspera",
+  "Fucus spp", "Halichondria spp", "Halosaccion glandiforme",
+  "Halymenia/Schizymenia spp", "Haplogloia andersonii", "Henricia spp",
+  "Laminaria setchellii", "Laminaria sinclairii", "Lottia asmi",
+  "Neoptilota/Ptilota spp", "Neorhodomela larix", "Neorhodomela oregona",
+  "Onchidella carpenteri", "Opalia wroblewskyi", "Pelvetiopsis arborescens/limitata",
+  "Semibalanus cariosus", "Spirobranchus spinosus", "Styela montereyensis",
+  "Tegula brunnea", "Ulothrix spp"
+)
+
+```
+
+```{r}
+# Create data frames
+df_north <- data.frame(species_lump = northern_species, range_edge = "northern edge")
+df_south <- data.frame(species_lump = southern_species, range_edge = "southern edge")
+```
+
+```{r}
+# Combine into one
+range_edge_df <- rbind(df_north, df_south)
+
+# View result
+print(range_edge_df)
+```
+## Combine cleaned dataframes
+
+```{r}
+# Combine range_edge_df and species_trends
+range_trends <- full_join(range_edge_df, species_trends, by = "species_lump")
+
+# Clean the species with slashes
+range_trends_clean <- range_trends %>%
+  mutate(species_lump = case_when(
+    species_lump == "Cirolana spp/Gnorimosphaeroma oregonense" ~ "Cirolana spp Gnorimosphaeroma oregonense",
+    species_lump == "Halymenia/Schizymenia spp" ~ "Halymenia Schizymenia spp",
+    species_lump == "Neoptilota/Ptilota spp" ~ "Neoptilota Ptilota spp",
+    species_lump == "Pelvetiopsis arborescens/limitata" ~ "Pelvetiopsis arborescens limitata",
+    TRUE ~ species_lump
+  ))
+
+```
+
+```{r}
+# Combine range_trends with raster_trends_clean
+all_species_factors <- full_join(raster_stats_clean, range_trends_clean, by = "species_lump")
+```
+
+## Scoring species
+
+```{r}
+priority_scores <- all_species_factors %>%
+  mutate(
+    range_edge = if_else(range_edge == "southern edge", 1, 0),
+    percent_change_dangermond = if_else(percent_change_dangermond < 0, 1, 0),
+    north_trend_positive = if_else(north_trend_positive == TRUE, 1, 0, missing = 0),
+    total_score = range_edge + percent_change_dangermond + north_trend_positive,
+    priority = case_when(
+      total_score == 3 ~ "high",
+      total_score == 2 ~ "moderate",
+      total_score == 1 ~ "minimal",
+      total_score == 0 ~ "low"
+    )
+  )
+
+```
+
+```{r}
+table <- priority_scores %>%
+  count(priority)
+
+print(table)
+```
+

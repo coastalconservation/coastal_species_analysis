@@ -14,9 +14,12 @@ library(here)
 library(terra)
 
 source(here::here('scripts', 'functions', 'percent_suit_change.R'))
+source(here::here('scripts', 'functions', 'big_bad_function.R'))
 ```
 
 ```{r}
+all_percents <- calculate_suitability_change(species_list_all)
+write.csv(all_percents, "species_suitability_change.csv", row.names = FALSE)
 #percent_suit_change(northern_species)
 ```
 
@@ -155,7 +158,7 @@ print(paste0("Cumulative percent change over all species: ", round(cumulative_pe
 
 ```{r}
 # Define species list (use species names with spaces)
-species_subset <- northern_species
+species_subset <- southern_species
 
 # Define raster directories
 current_dir <- "/capstone/coastalconservation/data/processed/species_model_rasters/current_species_rasters"
@@ -228,4 +231,25 @@ north_change <- north_edge_fut - north_edge_cur
 ```{r}
 plot(north_change)
 ```
+```{r}
+species_list_all <- c(
+  "Acmaea mitra", "Acrosorium spp", "Ahnfeltiopsis linearis", "Amphissa columbiana",
+  "Analipus japonicus", "Aplysia californica", "Bugula neritina", "Calliostoma canaliculatum",
+  "Calliostoma ligatum", "Chondria arcuata", "Chondria dasyphylla", "Chone minuta",
+  "Cirolana spp Gnorimosphaeroma oregonense", "Cryptochiton stelleri", "Cryptosiphonia woodii",
+  "Derbesia marina", "Desmarestia ligulata", "Dictyota coriacea", "Dilsea californica",
+  "Diodora aspera", "Fucus spp", "Gastroclonium parvum", "Halichondria spp",
+  "Halosaccion glandiforme", "Halymenia Schizymenia spp", "Haminoea vesicula",
+  "Haplogloia andersonii", "Henricia spp", "Jania rosea", "Laminaria setchellii",
+  "Laminaria sinclairii", "Laurencia spp", "Lottia asmi", "Macron lividus",
+  "Nemalion elminthoides", "Neoptilota Ptilota spp", "Neorhodomela larix",
+  "Neorhodomela oregona", "Norrisia norrisii", "Onchidella carpenteri",
+  "Paraxanthias taylori", "Pelvetiopsis arborescens limitata", "Pseudochama exogyra",
+  "Roperia poulsoni", "Sargassum agardhianum", "Semibalanus cariosus",
+  "Spirobranchus spinosus", "Styela montereyensis", "Taonia lennebackerae",
+  "Tegula aureotincta", "Tegula brunnea", "Ulothrix spp", "Zonaria farlowii"
+)
+
+```
+
 
