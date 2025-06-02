@@ -3,6 +3,15 @@ title: "CA_range-classification"
 format: html
 ---
 
+## Overview: California Segment Classification
+
+In ArcGIS, we iteratavely measured points along the coastline in 100 km segments. We began at Point Conception and ran both north and south until the Oregon and Mexico border, respectively. We then wrote the resulting points as latitude and longitude in the ```CA_coast_021425.csv``` file. Our first script, ```ca_segment_classification.R``` takes ```CA_coast_021425.csv``` and classify the area betwen these points. This is what we refer to as our segmentation strategy. Each segment will be named and defined in such a way that a site or species can easily be defined within it.
+
+The whole script is available in ```ca_segment_classification.R```, however we will walk through each part below.
+
+
+
+## Set Up 
 ```{r}
 library(tidyverse)
 library(stringr)
@@ -19,25 +28,6 @@ write_csv(
 )
 ```
 
-this is where were going to explain our script
-
-
-## Objective
-
-## Data 
-
-what, where? 
-
-## Scripts
-
-who, what, analysis?
-
-
-## California Segment Classification
-
-In ArcGIS, we iteratavely measured points along the coastline in 100 km segments. We began at Point Conception and ran both north and south until the Oregon and Mexico border, respectively. We then wrote the resulting points as latitude and longitude in the ```CA_coast_021425.csv``` file. Our first script, ```ca_segment_classification.R``` takes ```CA_coast_021425.csv``` and classify the area betwen these points. This is what we refer to as our segmentation strategy. Each segment will be named and defined in such a way that a site or species can easily be defined within it.
-
-The whole script is available in ```ca_segment_classification.R```, however we will walk through each part below.
 
 
 ### Initialize File Paths
