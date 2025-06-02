@@ -31,8 +31,8 @@ library(sf)
 library(testthat)
 
 
-# Read in coastal buffer shapefile from CyberDuck
-ca_coast <- read_sf('/capstone/coastalconservation/data/raw/spatial_data/CA_coastal_buffer_modeling/coast.buff.shp')
+# Read in 20 km coastal buffer shapefile from GitHUb
+ca_coast <- read_sf(here('archive_data', 'CA_coastal_buffer_modeling', 'coast_buff.shp'))
 
 # Historical data -------------------------------------------------------------
 
