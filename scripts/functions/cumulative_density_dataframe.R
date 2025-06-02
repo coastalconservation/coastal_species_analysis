@@ -29,8 +29,6 @@
 #' @import dplyr
 #' @export
 cum_den_df <- function(bio_df) {
-  library(dplyr)
-  library(tidyr)
 
   # Filter relevant data and create year bins
   bio_df <- bio_df %>%
