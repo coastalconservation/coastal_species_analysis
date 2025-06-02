@@ -26,7 +26,6 @@ sites <- read_csv('/capstone/coastalconservation/data/raw/MARINe_data/sites/mari
 # Read in CA coastline 
 coastline <- read_sf('/capstone/coastalconservation/data/raw/spatial_data/CA_coastline_polyline/coast.line.CA.shp')
 
-# SECOND COMMENT FOR TEST 
 
 # Prep data -------------------------------------------------------------------
 # CA COASTLINE 
@@ -60,47 +59,48 @@ if(st_crs(CA_coastline) == st_crs(sites_sf)) {
 
 # Snap MARINe sites to coastline -----------------------------------------------
 
+# TRYING TO FIGURE THIS OUT 
+
+
+# Try 1: densify coastline? might make snapping better 
+
 # Densify the coastline so snapping is more accurate
 CA_coastline_dense <- st_segmentize(CA_coastline, dfMaxLength = 100)  # segments every ~100 meters
 
-
-CA_coastline_dense_segments <- CA_coastline_dense %>%
-  st_segmentize(units::set_units(100, "m")) %>%   # 100m segment resolution
-  st_cast("LINESTRING") 
-
-CA_coastline_segments <- CA_coastline_dense %>%
-  st_cast("LINESTRING") %>%   # Break MULTILINESTRING into individual LINESTRINGs
-  st_segmentize(units::set_units(100, "m")) 
+# break up coastline linestring 
+coastline_densified <- st_segmentize(CA_coastline, units::set_units(100, "m"))
 
 
-nrow(CA_coastline_dense_segments)  # should be >> 8
+coords_before <- st_coordinates(CA_coastline)
+nrow(coords_before)  # Number of original vertices
 
-# Check that the CRS of each object matches 
-if(st_crs(CA_coastline_dense) == st_crs(sites_sf)) {
-  print("The coordinate reference systems match")
-} else {
-  warning("The coordinate reference systems were not a match. Transformation has now occured")
-  CA_coastline_dense <- st_transform(CA_coastline_dense, st_crs(sites_sf))
-}
+# After segmentizing
+CA_coastline_dense <- st_segmentize(CA_coastline, units::set_units(100, "m"))
+coords_after <- st_coordinates(CA_coastline_dense)
+nrow(coords_after)  # Should be much higher if it worked
+
+# Neither of these work. the line is unchanged. 
 
 
-# Snap sites to the nearest point *along the actual line*
-sites_snapped_TEST <- sites_sf %>%
-  rowwise() %>%
-  mutate(
-    snapped_geometry = {
-      nearest_line <- st_nearest_points(geometry, CA_coastline_dense)
-      st_cast(nearest_line, "POINT")[2]
-    }
-  ) %>%
-  ungroup() %>%
-  st_as_sf() %>%
-  mutate(geometry = snapped_geometry) %>%
-  select(marine_site_name, geometry)
 
-# CHECK 
-n_distinct(sites_sf$marine_site_name)  # should be 108
-n_distinct(st_geometry(sites_snapped_TEST)) # should also be 108
+# Try 2: horizontal lines off of the site points to get intersection with coastline linestring
+
+# 1. For each site, extract the latitude.
+
+# 2. Create a horizontal LINESTRING at that latitude that spans the extent of the coastline (or a bit wider).
+
+# 3. Intersect that line with the coastline to find the point where it touches the coast.
+
+# 4. Use that intersection point as the "snapped" point.
+
+
+# Need my data to be in CRS with degree units 
+
+coastline_wgs84 <- st_transform(CA_coastline, 4326)
+sites_wgs84 <- st_transform(sites_sf, 4326)
+
+
+
 
 
 # -----------------------------------------------------------------------------
@@ -137,9 +137,5 @@ any(duplicated(st_geometry(sites_snapped))) # There are some repeated geometries
 # Check which sites have repeated geometries 
 print(unique(sites_snapped$geometry)) # it seems there are only 8 locations 
 
-
-# Export files to processed folder 
-#st_write(CA_coastline, '/capstone/coastalconservation/data/processed/MARINe_site_snapping/CA_coastline.shp')
-#st_write(sites_snapped, '/capstone/coastalconservation/data/processed/MARINe_site_snapping/MARINe_sites_snapped.shp')
-
-
+# This strategy almost got us what we want, however it only resulted in 8 locations when we expected to see 137
+# This script should be adapted to snap the sites correctly, however we ended up going with a workflow in ArcGIS
