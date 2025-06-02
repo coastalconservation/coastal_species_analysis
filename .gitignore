@@ -2,6 +2,9 @@
 data/
 outputs/*
 
+# Data exception
+!data/CA_coastal_buffer_modeling/
+
 #.DS_Store
 /*.DS_Store
 
