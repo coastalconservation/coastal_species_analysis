@@ -1,3 +1,10 @@
+# ---------------------------------------------------------------------------
+
+# Description: This script returns the absolute range of all intertidal species in MARINe CBS dataset
+
+# ---------------------------------------------------------------------------
+
+
 # Load required libraries
 library(tidyverse)
 library(here)
