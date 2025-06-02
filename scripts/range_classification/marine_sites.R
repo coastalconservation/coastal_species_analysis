@@ -1,3 +1,9 @@
+# ---------------------------------------------------------------------------
+
+# Description: This script groups the MARINe sites within each 100 km coastal segment 
+
+# ---------------------------------------------------------------------------
+
 # Load required libraries
 library(tidyverse)
 library(here)

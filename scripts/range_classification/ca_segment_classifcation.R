@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------
 
-# Description: This script names the 100 km coastal segements, it extracts the northern and southern boundaries of each segement
+# Description: This script names the 100 km coastal segments, it extracts the northern and southern boundaries of each segement
 
 # ---------------------------------------------------------------------------
 
