@@ -1,8 +1,17 @@
-library(raster)
-library(dplyr)
-library(tibble)
-
+#' raster_percentages
+#'
+#' @param species_list 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 calculate_suitability_change <- function(species_list) {
+  
+  library(raster)
+  library(dplyr)
+  library(tibble)
+  
   # Define raster directories
   current_dir <- "/capstone/coastalconservation/data/processed/species_model_rasters/current_species_rasters"
   projected_dir <- "/capstone/coastalconservation/data/processed/species_model_rasters/projected_species_rasters"
