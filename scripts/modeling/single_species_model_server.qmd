@@ -1,14 +1,10 @@
 ---
-title: "loading data from server"
+title: "Species Modeling"
 format: html
 editor: visual
 editor_options: 
   chunk_output_type: console
 ---
-
-### Make map that shows where all the species are increasing or decreasing, not on average, nut cummulatively,
-
-Talk to Bruce about phrasing deliverable add reference map add toggle dots Models for the two different decades? blue color for map might be hard for viewing bc of ocean
 
 ```{r}
 # Load packages
@@ -29,9 +25,6 @@ library(stringr)
 # Load functions 
 source(here::here('scripts', 'functions', 'clean_isles_biodiv.R'))
 source(here::here('scripts', 'functions', 'single_species_model.R'))
-source(here::here('scripts', 'functions', 'tmap_habitat_change.R'))
-source(here::here('scripts', 'functions', 'auto_species_models.R'))
-#source(here::here('scripts', 'functions', 'GAM_function.R'))
 ```
 
 The ones in bold are the ones that did not work
@@ -160,18 +153,10 @@ Opalia wroblewskyi\*
 
 *Ulothrix spp*
 
-    # model tabItem ----
-    tabItem(tabName = "model"), # END model tabItem
-
-    # assessment tabItem ----
-    tabItem(tabName = "assessment"), # END assessment tabItem
-
-    # data tabItem ----
-    tabItem(tabName = "data") # END data tabItem
 
 ```{r}
 # Create rasters and show plots
-single_species_model('Pelvetiopsis arborescens/limitata')
+single_species_model('Calliostoma canaliculatum')
 ```
 
 ## Load Raster Data
