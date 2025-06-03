@@ -1,0 +1,244 @@
+---
+title: "Modeling Intertidal Species Using ESDMs"
+author: Amanda Overbye
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+### Overview
+
+This document describes the workflow for modeling present and future habitat suitability for intertidal marine species using observational biodiversity data collected from 2000 to 2024. Environmental predictors are derived from Bio-Oracle climatology datasets, with historical conditions representing 2000 and future projections for 2050 under the SSP4-6.0 scenario.
+
+Ensemble species distribution models (ESDMs) estimate current and future habitat suitability, enabling assessment of potential species range shifts under changing climate conditions. This workflow was developed to create rasters for the California Ranges of Intertidal Species Portal (CRISP) for The Nature Conservancy and demonstrates the general process used to create the `single_species_model` function.
+
+```{r}
+# Load packages
+library(tidyverse)
+library(dplyr)
+library(SSDM)
+library(terra)
+library(here)
+
+
+# Load functions 
+source(here::here('scripts', 'functions', 'clean_isles_biodiv.R'))
+source(here::here('scripts', 'functions', 'single_species_model.R'))
+```
+
+This file was used to develop and run the modeling functions for the analysis. In this cleaned version, we have not included the function call code chunks to allow users to run the full workflow efficiently. To execute specific models, users can uncomment the provided function calls by removing the comment symbol (#) in the code chunk below.
+
+```{r}
+# Example use of species single_species_model.R
+single_species_model('Alaria marginata')
+```
+
+## Load Raster Data
+
+```{r}
+# Manually read in the rasters
+thetao_mean_50  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/thetao_mean_50.tif")
+tas_mean_50     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/tas_mean_50.tif")
+so_mean_50      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/so_mean_50.tif")
+o2_mean_50      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/o2_mean_50.tif")
+mlotst_mean_50  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/mlotst_mean_50.tif")
+clt_mean_50     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/projected_ssp460/clt_mean_50.tif")
+
+# Combine into one multi-layer object
+env_50_load <- c(thetao_mean_50,
+                  tas_mean_50,
+                  so_mean_50,
+                  o2_mean_50,
+                  mlotst_mean_50,
+                  clt_mean_50)
+```
+
+```{r}
+# Change to env_ssp460 
+env_50_load <- stack(env_50_load)
+```
+
+```{r}
+# Manually read in the historical rasters
+thetao_mean_00  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/thetao_mean_00.tif")
+tas_mean_00     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/tas_mean_00.tif")
+so_mean_00      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/so_mean_00.tif")
+o2_mean_00      <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/o2_mean_00.tif")
+mlotst_mean_00  <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/mlotst_mean_00.tif")
+clt_mean_00     <- rast("/capstone/coastalconservation/data/raw/BioOrc_rasters/historical/clt_mean_00.tif")
+
+# Combine into a single multi‐layer SpatRaster
+env_00_load <- c(
+  thetao_mean_00,
+  tas_mean_00,
+  so_mean_00,
+  o2_mean_00,
+  mlotst_mean_00,
+  clt_mean_00
+)
+
+env_00_load <- stack(env_00_load)
+```
+
+## Read in Biodiv data
+
+```{r}
+# Read in biodiversity data 
+biodiv_2025 <- clean_isles_biodiv(cbs_excel_name = 'cbs_data_2025.xlsx', 
+                              point_contact_sheet = 'point_contact_summary_layered',
+                              quadrat_sheet = 'quadrat_summary_data',
+                              swath_sheet = 'swath_summary_data')
+```
+
+## Modeling with An Example Species: Alaria marginata
+
+### Formatting data
+
+The code chunks below represent the workflow for data cleaning used in the single_species_model.R
+
+```{r}
+# Filter to alaria
+alaria_data <- biodiv_2025 %>% 
+  filter(species_lump == "Alaria marginata")
+```
+
+```{r}
+# Formatting observation data
+alaria_obs <- alaria_data |>
+  group_by(species_lump, latitude, longitude, island) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+```
+
+### Creating binary occurrence column
+
+```{r}
+# Expand rows & keep observation column
+alaria_pres_abs <- alaria_obs %>%
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>%
+  dplyr::select(-num_count)
+```
+
+### Running Ensemble Species Distribution Models (ESDM)
+
+```{r}
+# Subset the data to the species of interest
+alaria_subset <- subset(alaria_pres_abs, species_lump == 'Alaria marginata')
+```
+
+```{r}
+# Turn data into data frame
+alaria_subset <- as.data.frame(alaria_subset)
+
+# Check the structure to make sure it looks right
+str(alaria_subset)
+
+# Run the model and add in Pcol
+ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    alaria_subset, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    Pcol = 'occurrence',
+                    verbose = FALSE)
+
+```
+
+## Running ESDM Workflow for 2025 Habitat Projection Test
+
+```{r}
+test_model <- function(species){
+  
+  species_data <- biodiv_2025 %>% 
+  filter(species_lump == species)
+  
+  species_obs <- species_data |>
+  group_by(species_lump, latitude, longitude) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+  
+  # Expand rows & keep observation column
+  species_pres_abs <- species_obs %>%
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+  dplyr::select(-num_count)
+  
+  # Subset the species
+  species_subset <- subset(species_pres_abs, species_pres_abs$species_lump == species)
+  
+  # Turn subset into data frame
+  species_subset <- as.data.frame(species_subset)
+  
+# Run the model and add in Pcol
+  ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    species_subset, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    Pcol = 'occurrence',
+                    verbose = FALSE)
+
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " with ESDM algorithm\n using"))
+
+knitr::kable(ESDM@evaluation)
+
+# plot(ESDM)
+}
+```
+
+```{r}
+test_model('Alaria marginata')
+```
+
+### Running ESDM Workflow for 2050 Habitat Projection Test
+
+```{r}
+future_model <- function(species){
+  
+  
+  species_clean <- gsub("/", "_", species)
+
+  biodiv_2025 <- biodiv_2025 %>%
+  mutate(species_lump_clean = gsub("/", "_", species_lump))
+  
+  species_data <- biodiv_2025 %>% 
+  filter(species_lump == species)
+  
+  species_obs <- species_data |>
+  group_by(species_lump, latitude, longitude) |>
+  summarise(num_count = sum(total_count)) |>
+  ungroup()
+  
+  # Expand rows & keep observation column
+  species_pres_abs <- species_obs %>%
+  mutate(occurrence = ifelse(num_count >= 1, 1, 0)) %>% 
+  dplyr::select(-num_count)
+  
+  # Subset the species
+  species_subset <- subset(species_pres_abs, species_pres_abs$species_lump == species)
+  
+  # Turn subset into data frame
+  species_subset <- as.data.frame(species_subset)
+  
+# Run the model and add in Pcol
+  ESDM <- ensemble_modelling(c('GAM','GLM','MARS','CTA','GBM','MAXENT','ANN','RF','SVM'), 
+                    species_subset, 
+                    env_00_load, 
+                    Xcol = 'longitude', 
+                    Ycol = 'latitude', 
+                    Pcol = 'occurrence',
+                    verbose = FALSE)
+
+  ESDM_projection <- SSDM::project(ESDM, env_50_load)
+
+plot(ESDM@projection, main = paste0("ESDM\nfor ", species, " in 2050 with ESDM algorithm"))
+
+knitr::kable(ESDM@evaluation)
+
+# plot(ESDM_projection)
+}
+```
+
+```{r}
+future_model('Alaria marginata')
+```
