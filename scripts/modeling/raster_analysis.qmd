@@ -272,8 +272,11 @@ priority_species_binary <- raw_priority %>%
     suitability_decrease_dangermond,
     northward_trend
   ) %>%
-  # Only replace NA in northward_trend
-  mutate(northward_trend = replace_na(northward_trend, 0))
+  mutate(
+    northward_trend = replace_na(northward_trend, 0),
+    species_expansion_score = northern_range_edge + northward_trend + suitability_increase_dangermond,
+    species_contraction_score = southern_range_edge + northward_trend + suitability_decrease_dangermond
+  )
 
 # Write cleaned binary file ----
 write_csv(priority_species_binary, "/capstone/coastalconservation/data/processed/analyses_results/priority_species_binary.csv")
