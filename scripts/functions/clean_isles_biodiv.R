@@ -1,7 +1,8 @@
 #' Clean MARINe Coastal Biodiversity Surveys Data 
 #'
 #' @description
-#' This function takes the MARINe CBS Excel file name and merges key sheets for presence-absence analysis.
+#' #' This function reads and merges MARINe Coastal Biodiversity Survey (CBS) Excel sheets into a combined 
+#' dataset for presence-absence analysis. The cleaned output includes data from both mainland and island sites.
 #' 
 #' @param cbs_excel_name The filename of the MARINe CBS Excel file (e.g., "cbs_data_2025.xlsx")
 #' @param point_contact_sheet Exact name of the point contact summary sheet

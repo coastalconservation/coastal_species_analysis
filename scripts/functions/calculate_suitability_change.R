@@ -1,11 +1,31 @@
-#' raster_percentages
+#' calculate_suitability_change
 #'
-#' @param species_list 
+#' @description 
+#' Calculates both raw and percent change in habitat suitability between current and projected rasters for a list of species. 
+#' The function summarizes change for two spatial extents: full California statewide coverage and the Dangermond Preserve extent.
 #'
-#' @return
+#' @param species_list A character vector of species names (matching raster file naming conventions, with spaces automatically converted to underscores).
+#'
+#' @details 
+#' For each species, the function reads current and projected habitat suitability rasters, computes total suitability values 
+#' for California-wide and Dangermond Preserve extents, and calculates raw and percent changes in habitat suitability.
+#' If no data exists for current suitability (sum = 0), percent change is handled with division-by-zero protection.
+#'
+#' @return A tibble containing the following columns for each species:
+#' \describe{
+#'   \item{species_name}{The species name used as input.}
+#'   \item{raw_change_ca}{Raw (absolute) change in total habitat suitability statewide.}
+#'   \item{percent_change_ca}{Percent change in habitat suitability statewide.}
+#'   \item{raw_change_dangermond}{Raw (absolute) change in suitability within the Dangermond bounding box.}
+#'   \item{percent_change_dangermond}{Percent change in suitability within the Dangermond bounding box.}
+#' }
+#'
 #' @export
 #'
 #' @examples
+#' species_list <- c("Alaria marginata", "Pisaster ochraceus")
+#' calculate_suitability_change(species_list)
+#' 
 calculate_suitability_change <- function(species_list) {
   
   library(raster)
