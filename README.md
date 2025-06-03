@@ -22,7 +22,7 @@ Coastal Species Analysis Repository
 
 ## Overview 
 
-This repository contains all scripts used to identify intertidal species ranges along the California coast, analyze historical range and abundance, develop species distribution models, and create habitat suitability maps. See the folder descriptions below for a detailed breakdown of the repository structure!
+This repository contains all scripts used to identify intertidal species ranges along the California coast, analyze contemporary ranges over time, develop species distribution models, and create habitat suitability maps. See the folder descriptions below for a detailed breakdown of the repository structure!
 
 
 ## Folder Descriptions 
@@ -31,41 +31,50 @@ This repository contains all scripts used to identify intertidal species ranges 
 
 This folder contains all of the code scripts used to conduct our analysis. Each subfolder within this folder holds a different part of the analysis. 
 
---------------------------------------------------------------------------------------------------------------
-**range_classification/**
+
+- **range_classification/**
 
 This folder contains the scripts used in identifying the range edges of intertidal species along the California coast. To view more about the workflow of this part of the analysis, see the `CA_range_classification.qmd` document within this folder that outlines the methods used, sources the functions, and executes the analysis. 
 
 
-**range_shift_framework/** 
+- **range_shift_analysis/** 
 
-This folder contains the scripts used in analyzing abundance trends of a select group of species that were identified as having a range edge near Point Conception. The purpose of this analysis is to view the density of the intertidal species along the coast and to view the range extent over time, to try and identify historical range shifts. To view the process of the analysis, see the `range_shift_analysis.qmd` document within this folder, which outlines the methods used, sources the functions, executes the empirical cumulative distribution analysis, and generates plots.  
+This folder contains the scripts used in analyzing range trends of a select group of species that were identified as having a range edge near Point Conception. The purpose of this analysis is to view the core range of the intertidal species along the coastline over time, to try and identify historical range shifts. To view the process of the analysis, see the `range_shift_analysis.qmd` document within this folder, which outlines the methods used, sources the functions, executes the empirical cumulative distribution analysis, and generates plots.  
 
-**modeling/** 
+- **modeling/** 
 
-This folder contains all the scripts used in producing the habitat suitability maps based on ensemble species distribution models for a select group of intertidal species that were identified as having a range edge near Point Conception. The purpose of this analysis is to model where suitable habitat for a particular species has been historically based on the MARINe biodiversity survey data, predict the suitable habitat in the year 2050 based on a middle-of-the-road emission scenario, and create a change detection map that identifies predicted loss of habitat. To view the process of this analysis, see the `INSERT QMD NAME` document in this folder that sources all the functions, runs the species distribution models, and prepares the habitat suitability maps for the dashboard.   
+This folder contains all the scripts used in producing the habitat suitability maps based on ensemble species distribution models for a select group of intertidal species that were identified as having a range edge near Point Conception. The purpose of this analysis is to model where suitable habitat for a particular species has been historically based on the MARINe biodiversity survey data, predict the suitable habitat in the year 2050 based on a middle-of-the-road emission scenario, and create a change detection map that identifies predicted loss of habitat. To view the process of this analysis, see the `intertidal_species_esdms.qmd` document in this folder that sources all the functions, runs the species distribution models, and prepares the habitat suitability maps for the dashboard.   
 
-**functions/** 
+- **priority_monitoring_assessment/**
+
+This folder contains the script used in creating the species priority monitoring analysis. This analysis involves consolidating the results of the range classification, contemporary range shift, and future suitable habitat results as a way to identify intertidal species that are at risk of a range extension into or range contraction out of the Point Conception region. To view the process of this analysis, see the  `monitoring_priority_analysis.qmd` document within this folder.
+
+- **functions/** 
 
 This folder contains functions used throughout the project. Here are the descriptions of each function and where each function is utilized:  
 
 
 | File Name                                                 |  Description                          | Project Component 
 | ----------------------------------------------------------| ------------------------------------- |----------------------------|
-| `buffer_classification.R` |  Create range edge descriptions for each species at each buffer | range_classification/ | 
+| `calculate_suitability_change.R` |  Calculates both raw and percent change in habitat suitability between current and projected rasters for a list of species | modeling/, priority_monitoring_assessment/ | 
 | `clean_biodiv.R` | Takes the MARINe CBS Excel file name and merges key sheets for presence-absence analysis | range_classification/,  range_shift_framework/,  modeling/ |
+|`clean_isles_biodiv.R` | Same function as `clean_biodiv.R`, but it includes observations at MARINe sites on the Channel Islands |  modeling/ |
 | `cumulative_density_dataframe.R` | Computes the cumulative sum of density and the normalized cumulative density for each species group and year | range_shift_framework/ | 
-| `model_sing_species.R` | Runs an ensemble species distribution model for a single given species | modeling/ | 
-| `range_classification.R` | Calculates species ranges within defined coastline segments using species biodiversity data | range_classification/ | 
-| `range_extent_prediction.R` | Creates a visualization of a species' range boundaries over time by plotting the latitudinal extent for each year | range_shift_framework/ | 
+| `historic_range_trends.R` | Creates a visualization of a species' range boundaries over time by plotting the latitudinal extent for each year | range_shift_analysis/ | 
+| `single_species_model.R` | Runs an ensemble species distribution model for a single given species | modeling/ | 
 
 
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
-### outputs: 
+### archive_data: 
+
+This folder contains a subset of data used throughout the project. 
 
 
+- **CA_coastal_buffer_modeling/** 
+
+This folder contains a shapefile that is a 20 km buffer of the California coastline. It was used in the pre-processing of the Bio-ORACLE environmental rasters to mask out areas that were not along the coastline.
 
 ----------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -160,43 +169,46 @@ Files used:
 coastal_species_analysis 
 |
 ├── scripts/   # Analysis and modeling scripts
+│
+│	├── functions/     # Functions
+│   	│	├── calculate_suitability_change.R
+│   	│	├── clean_biodiv.R
+│   	│	├── clean_isles_biodiv.R
+│   	│	├── cumulative_density_dataframe.R
+│   	│	├── historic_range_trends.R
+│   	│	└── single_species_model.R
+│	│
+│	├── modeling/             # Scripts for species distribution modeling
+│   	│	├──  download-BioORACLE.R
+│   	│	├──  intertidal_species_esdms.qmd
+│   	│	└──  raster_analysis.qmd
+│	│
+│	├── priority_monitoring_assessment/      # Scripts for species priority analysis 
+│   	│	└── monitoring_priority_analysis.qmd
 │	│
 │	├── range_classifcation/      # Scripts for species list & map creation
 │   	│	├──  CA_range-classification.qmd
+│   	│	├── MARINe_sites_snapping.R
 │   	│	├──  ca_segment_classification.R
-│   	│	├──  dangermond_range_edges.R
 │   	│	├──  marine_sites.R
-│   	│	└──  range_classificaton.R 
+│   	│	└──  species_range_classificaton.R 
 │	│
-│	├── range_shift_framework/   # Scripts for range shift framework
-│   	│	├── range_shift_analysis.qmd
-│   	│	└── range_shift_classification.qmd
-│	│
-│	├── modeling/             # Scripts for species distribution modeling
-│   	│	├──  ssdm_modeling_test_files
-│   	│	├──  download-BioORACLE.R
-│   	│	├──  single_species_model_server.qmd
-│   	│	├──  single_species_model_server.rmarkdown
-│   	│	├──  ssdm_modeling_test.html
-│   	│	└──  ssdm_modeling_test.qmd
-│	│
-│	├── functions/     # Functions
-│   	│	├── buffer_classification.R   
-│   	│	├── clean_biodiv.R
-│   	│	├── cumulative_density_dataframe.R
-│   	│	├── model_sing_species.R 
-│   	│	├── range_classification.R
-│   	│	├── range_extent_prediction.R
-│   	└──	└── range_extent_prediction.R
+│	├── range_shift_analysis/   # Scripts for range shift framework
+│   	└──	└── range_shift_analysis.qmd
+│	
 │
-├── outputs/             # Results, figures, and reports
-│       ├── tables/          # Summary tables
-│       ├── figures/         # Maps and plots
-│       └──  models/          # SDM results
+├── archive_data/             
+│       └──  CA_coastal_buffer_modeling/   # 20 km coastline buffer shapefile 
+│
+├── .gitignore 
+│
+├── LICENSE  # Mozilla Public License Version 2.0
 │
 ├── README.md        # Project overview & setup instructions
-│  
-└── .gitignore           
+│
+├── coastal_species_analysis.Rproj
+│
+└──  session_info.txt  # Repository project dependencies        
 ```
 
 
