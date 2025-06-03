@@ -1,5 +1,6 @@
 ---
 title: "Raster analysis"
+author: Amanda Overbye
 format: html
 editor: visual
 editor_options: 
@@ -20,12 +21,8 @@ source(here::here('scripts', 'functions', 'big_bad_function.R'))
 ```{r}
 all_percents <- calculate_suitability_change(species_list_all)
 write.csv(all_percents, "species_suitability_change.csv", row.names = FALSE)
-#percent_suit_change(northern_species)
 ```
 
-```{r}
-#percent_suit_change(southern_species)
-```
 
 This file describes how to do the analysis Coastal Conservation did on select species who have range shifts seen in and around the Dangermond Preserve.
 
@@ -34,12 +31,10 @@ This file describes how to do the analysis Coastal Conservation did on select sp
 base_path <- "/capstone/coastalconservation/data/processed/species_model_rasters/change_species_rasters"
 ```
 
-
 ```{r}
 # Create bounding box around Point Conception
 bbox_extent <- extent(-121.597681, -118.117269, 34.35797, 35.24002)
 ```
-
 
 ```{r}
 # Define species and range edge type
@@ -100,7 +95,6 @@ for (i in 1:nrow(species_df)) {
 results
 ```
 
-
 ```{r}
 # Count the value for northern edge and southern edge species
 edge_sums <- results %>% 
@@ -117,6 +111,7 @@ species_total_sum <- sum(results$Sum)
 # Print results
 print(species_total_sum)
 ```
+
 ```{r}
 # Define raster directories
 current_dir <- "/capstone/coastalconservation/data/processed/species_model_rasters/current_species_rasters"
@@ -196,9 +191,11 @@ if (total_current == 0) {
 # Print result
 print(paste0("Cumulative percent change for subset: ", round(cumulative_percent_change, 2), "%"))
 ```
+
 ```{r}
 plot(future_stack)
 ```
+
 ```{r}
 # Create plot for future habit for all species with northern range edges
 north_edge_fut <- sum(future_stack)
@@ -224,6 +221,7 @@ tm_shape(north_edge_cur) +
   tm_basemap("Esri.WorldStreetMap") +
   tm_layout(main.title = "Cumulative Suitability (Future)", legend.outside = TRUE)
 ```
+
 ```{r}
 north_change <- north_edge_fut - north_edge_cur
 ```
@@ -231,6 +229,7 @@ north_change <- north_edge_fut - north_edge_cur
 ```{r}
 plot(north_change)
 ```
+
 ```{r}
 species_list_all <- c(
   "Acmaea mitra", "Acrosorium spp", "Ahnfeltiopsis linearis", "Amphissa columbiana",
@@ -252,4 +251,31 @@ species_list_all <- c(
 
 ```
 
+```{r}
+# Read in raw priority scores ----
+raw_priority <- read_csv("/capstone/coastalconservation/data/processed/analyses_results/raw_priority_scores.csv")
+
+# Convert to binary flags ----
+priority_species_binary <- raw_priority %>%
+  mutate(
+    northern_range_edge = if_else(range_edge == "northern edge", 1, 0),
+    southern_range_edge = if_else(range_edge == "southern edge", 1, 0),
+    suitability_increase_dangermond = if_else(percent_change_dangermond > 0, 1, 0),
+    suitability_decrease_dangermond = if_else(percent_change_dangermond < 0, 1, 0),
+    northward_trend = if_else(north_trend_positive == TRUE, 1, 0)
+  ) %>%
+  select(
+    species_lump,
+    northern_range_edge,
+    southern_range_edge,
+    suitability_increase_dangermond,
+    suitability_decrease_dangermond,
+    northward_trend
+  ) %>%
+  # Only replace NA in northward_trend
+  mutate(northward_trend = replace_na(northward_trend, 0))
+
+# Write cleaned binary file ----
+write_csv(priority_species_binary, "/capstone/coastalconservation/data/processed/analyses_results/priority_species_binary.csv")
+```
 
