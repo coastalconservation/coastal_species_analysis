@@ -1,12 +1,12 @@
----
-title: "Range Shift Analysis"
-format: html
-editor_options: 
-  chunk_output_type: console
----
-
-## Load packages
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
 #| code-fold: true
 library(here)
 library(readr)
@@ -22,14 +22,14 @@ library(purrr) # Functional programming tools
 library(ggplot2) # Plotting
 library(mgcv) # Generalized Additive Models
 library(scales)
-```
-
-## Read data
-```{r}
+#
+#
+#
+#
 # Source cleaning function
 source(here("scripts", "functions", "clean_biodiv.R"))
 source(here("scripts", "functions", "cumulative_density_dataframe.R"))
-source(here("scripts", "functions", "range_trends.R"))
+source(here("scripts", "functions", "historic_range_trends.R"))
 source(here("scripts", "functions", "cumulative_density_graph.R"))
 # Load data
 species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
@@ -44,55 +44,119 @@ biodiv_df <- read_csv(
     ),
     show_col_types = FALSE
 )
-```
-
-```{r}
+#
+#
+#
+#
 gam_plot("Fucus spp")
 gam_predict("Fucus spp", biodiv_df)
-```
+#
+#
+#
+species_name <- "Fucus spp"
 
-```{r}
+species_biodiv <- biodiv_df %>%
+    left_join(
+        marine_sites %>%
+            select(marine_site_name, coastline_m),
+        by = join_by(marine_site_name)
+    ) %>%
+    filter(
+        state_province == "California",
+        species_lump == species_name
+    )
+
+
+bio_df <- species_biodiv
+  # Filter relevant data and create year bins
+  bio_df <- bio_df %>%
+    filter(
+      state_province == "California",
+      collection_source != "point contact"
+    ) %>%
+    mutate(
+      year_bin = paste0(
+        floor(year / 5) * 5, "-",
+        floor(year / 5) * 5 + 4
+      ),
+      year_bin = as.factor(year_bin)
+    ) %>%
+    group_by(species_lump, marine_site_name, coastline_m, year_bin) %>%
+    summarise(
+      mean_density = mean(density_per_m2, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+  # Create a complete grid of species x year_bin x coastline_m
+  full_grid <- expand.grid(
+    species_lump = unique(bio_df$species_lump),
+    year_bin = unique(bio_df$year_bin),
+    coastline_m = sort(unique(bio_df$coastline_m))
+  ) %>%
+    as_tibble()
+
+  # Join with observed data and compute cumulative and normalized densities
+  bio_df_full <- full_grid %>%
+    left_join(bio_df, by = c("species_lump", "year_bin", "coastline_m")) %>%
+    mutate(mean_density = replace_na(mean_density, 0)) %>%
+    arrange(species_lump, year_bin, coastline_m) %>%
+    group_by(species_lump, year_bin) %>%
+    mutate(
+      cum_den = cumsum(mean_density),
+      cum_den_norm = cum_den / max(cum_den, na.rm = TRUE)
+    ) %>%
+    # Add a row at coastline_m = 0 for plotting (to anchor curves at 0)
+  group_modify(~ {
+    .x <- add_row(.x,
+      cum_den = 0, cum_den_norm = 0, coastline_m = 0, .before = 1)
+    .x <- add_row(.x,
+      cum_den = 1, cum_den_norm = 1,
+      coastline_m = max(.x$coastline_m, na.rm = TRUE),
+      .after = nrow(.x))
+    .x
+  }) %>%
+    ungroup() %>%
+    select(
+      species_lump, year_bin, coastline_m, cum_den, cum_den_norm
+    )
+
+  return(bio_df_full)
+#
+#
+#
 dangermond_boundary_species <- species_extent %>%
     filter(str_detect(southern_extent_name, "Point Conception") |
-        str_detect(northern_extent_name, "Point Conception"))
-```
-
-```{r}
-dangermond_boundary_species
-```
-
-```{r}
-dangermond_boundary_species_list <- dangermond_boundary_species %>% pull(species_lump)
-dangermond_boundary_species_list
-```
-
-Northern
-```{r}
+        str_detect(northern_extent_name, "Point Conception") |
+        str_detect(northern_extent_name, "Point Mugu"))
+#
+#
+#
+#
 northern_boundary_species <- dangermond_boundary_species %>%
     filter(
         str_detect(northern_extent_name, "Point Conception")
     ) %>%
     pull(species_lump)
-```
-
-```{r}
+#
+#
+#
 northern_boundary_species
-```
-
-Southern
-```{r}
+#
+#
+#
+#
 southern_boundary_species <- dangermond_boundary_species %>%
     filter(
         str_detect(southern_extent_name, "Point Conception")
     ) %>%
     pull(species_lump)
-```
-
-```{r}
+#
+#
+#
 southern_boundary_species
-```
-
-```{r}
+#
+#
+#
 northern_trends_df <- map_dfr(
     northern_boundary_species,
     function(species_name) {
@@ -124,35 +188,36 @@ northern_trends_df <- map_dfr(
     }
 )
 
-```
-
-
-```{r}
+#
+#
+#
+#
 write_csv(
     northern_trends_df,
     file = "/capstone/coastalconservation/data/processed/ntrends_stats.csv"
 )
-```
-
-```{r}
+#
+#
+#
 northern_trends_df %>% View()
-```
-
-```{r}
+#
+#
+#
 northern_trends_df %>%
     filter(
-        n_trend_rate > 200,
+        # north_trend_positive == TRUE,
+        n_trend_rate > 1000,
     ) %>%
     pull(species)
-```
-
- [1] "Aplysia californica"   "Bugula neritina"       "Chondria arcuata"     
- [4] "Chondria dasyphylla"   "Gastroclonium parvum"  "Haminoea vesicula"    
- [7] "Jania rosea"           "Nemalion elminthoides" "Norrisia norrisii"    
-[10] "Paraxanthias taylori"  "Pseudochama exogyra"   "Roperia poulsoni"     
-[13] "Taonia lennebackerae"  "Tegula aureotincta"   
-
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
 southern_trends_df <- map_dfr(
     southern_boundary_species,
     function(species_name) {
@@ -183,44 +248,81 @@ southern_trends_df <- map_dfr(
         )
     }
 )
-```
-
-```{r}
+#
+#
+#
 write_csv(
     southern_trends_df,
     file = "/capstone/coastalconservation/data/processed/strends_stats.csv"
 )
-```
-
-```{r}
+#
+#
+#
 southern_trends_df %>% View()
-```
-
-```{r}
+#
+#
+#
 southern_trends_df %>%
     filter(
-        n_trend_rate > 200,
+        # north_trend_positive == TRUE,
+        n_trend_rate > 1000,
     ) %>%
     pull(species)
-```
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+all_trends_df <- map_dfr(
+    biodiv_df %>% pull(species_lump) %>% unique(),
+    function(species_name) {
+        result <- tryCatch(
+            range_trend(species_name),
+            error = function(e) {
+                warning(paste("Failed to compute range_trend for", species_name, ":", e$message))
+                return(NULL)
+            }
+        )
 
- [1] "Ahnfeltiopsis linearis"            "Calliostoma annulatum"            
- [3] "Calliostoma canaliculatum"         "Cryptosiphonia woodii"            
- [5] "Derbesia marina"                   "Dilsea californica"               
- [7] "Diodora aspera"                    "Fucus spp"                        
- [9] "Halosaccion glandiforme"           "Halymenia/Schizymenia spp"        
-[11] "Haplogloia andersonii"             "Henricia spp"                     
-[13] "Laminaria setchellii"              "Neoptilota/Ptilota spp"           
-[15] "Neorhodomela larix"                "Neorhodomela oregona"             
-[17] "Onchidella carpenteri"             "Pelvetiopsis arborescens/limitata"
-[19] "Semibalanus cariosus"              "Spirobranchus spinosus"           
-[21] "Styela montereyensis"              "Tegula brunnea"                   
-[23] "Ulothrix spp" 
+        if (is.null(result)) {
+            return(tibble(
+                species = species_name,
+                north_trend_positive = NA,
+                n_trend_rate = NA,
+                r_squared = NA,
+                p_val = NA
+            ))
+        }
 
-
-```{r}
-dangermond_boundaries_df <- map_dfr(
-    dangermond_boundary_species_list,
+        tibble(
+            species = species_name,
+            north_trend_positive = unname(result$n_bound_pos_trend),
+            n_trend_rate = unname(result$n_trend_rate),
+            n_r_squared = unname(result$n_r_squared),
+            n_p_val = unname(result$n_p_val),
+            south_trend_positive = unname(result$s_bound_pos_trend),
+            s_trend_rate = unname(result$s_trend_rate),
+            s_r_squared = unname(result$s_r_squared),
+            s_p_val = unname(result$s_p_val)
+        )
+    }
+)
+#
+#
+#
+all_boundaries_df <- map_dfr(
+    biodiv_df %>% pull(species_lump) %>% unique(),
     function(species_name) {
         result <- tryCatch(
             range_trend(species_name),
@@ -238,10 +340,7 @@ dangermond_boundaries_df <- map_dfr(
                 year_bin = boundaries$year_bin,
                 year_floor = boundaries$year_floor,
                 north_boundary = NA,
-                south_boundary = NA,
-                north_trend_positive = NA,
-                south_trend_postive = NA
-
+                south_boundary = NA
             ))
         }
 
@@ -250,34 +349,48 @@ dangermond_boundaries_df <- map_dfr(
             year_bin = boundaries$year_bin,
             year_floor = boundaries$year_floor,
             north_boundary = boundaries$north_boundary,
-            south_boundary = boundaries$south_boundary,
-            north_trend_positive = result$n_bound_pos_trend,
-            south_trend_positive = result$s_bound_pos_trend
+            south_boundary = boundaries$south_boundary
         )
     }
 ) %>% arrange(species)
-```
-
-```{r}
-north_boundaries_df <- dangermond_boundaries_df %>%
-    filter(
-        species %in% southern_boundary_species
-    )
-
-south_boundaries_df <- dangermond_boundaries_df %>%
-    filter(
-        species %in% northern_boundary_species
-    )
-```
-
-```{r}
+#
+#
+#
+all_boundaries_df <- all_boundaries_df %>% arrange(species)
 saveRDS(
-    north_boundaries_df,
-    file = "/capstone/coastalconservation/data/processed/north_boundary_trends.rds"
+    all_boundaries_df,
+    file = "/capstone/coastalconservation/data/processed/boundaries.rds"
 )
+#
+#
+#
+target_species <- c(
+    "Agathistoma eiseni",
+    "Aplysia californica",
+    "Haminoea vesicula",
+    "Norrisia norrisii",
+    "Paraxanthias taylori",
+    "Roperia poulsoni",
+    "Tegula aureotincta",
+    "Calliostoma annulatum", 
+    "Calliostoma canaliculatum",
+    "Diodora aspera",
+    "Henricia spp",
+    "Onchidella carpenteri",
+    "Tegula brunnea"
+)
+#
+#
+#
+target_boundaries <- readRDS(
+    "/capstone/coastalconservation/data/processed/boundaries.rds"
+) %>%
+    filter(species %in% target_species)
 
 saveRDS(
-    south_boundaries_df,
-    file = "/capstone/coastalconservation/data/processed/south_boundary_trends.rds"
+    target_boundaries,
+    file = "/capstone/coastalconservation/data/processed/target_boundaries.rds"
 )
-```
+#
+#
+#

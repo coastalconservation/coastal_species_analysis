@@ -29,14 +29,20 @@
 #' @import dplyr
 #' @export
 cum_den_df <- function(bio_df) {
+  if (all(is.na(bio_df$density_per_m2))) {
+    bio_df <- bio_df %>%
+      dplyr::mutate(cum_norm = percent_cover)
+  } else {
+    bio_df <- bio_df %>%
+      dplyr::mutate(cum_norm = density_per_m2)
+  }
 
   # Filter relevant data and create year bins
   bio_df <- bio_df %>%
     filter(
-      state_province == "California",
-      collection_source != "point contact"
+      state_province == "California"
     ) %>%
-    mutate(
+    dplyr::mutate(
       year_bin = paste0(
         floor(year / 5) * 5, "-",
         floor(year / 5) * 5 + 4
@@ -44,8 +50,8 @@ cum_den_df <- function(bio_df) {
       year_bin = as.factor(year_bin)
     ) %>%
     group_by(species_lump, marine_site_name, coastline_m, year_bin) %>%
-    summarise(
-      mean_density = mean(density_per_m2, na.rm = TRUE),
+    dplyr::summarise(
+      mean_density = mean(cum_norm, na.rm = TRUE),
       .groups = "drop"
     )
 
@@ -55,34 +61,37 @@ cum_den_df <- function(bio_df) {
     year_bin = unique(bio_df$year_bin),
     coastline_m = sort(unique(bio_df$coastline_m))
   ) %>%
-    as_tibble()
+    dplyr::as_tibble()
 
   # Join with observed data and compute cumulative and normalized densities
   bio_df_full <- full_grid %>%
-    left_join(bio_df, by = c("species_lump", "year_bin", "coastline_m")) %>%
-    mutate(mean_density = replace_na(mean_density, 0)) %>%
-    arrange(species_lump, year_bin, coastline_m) %>%
-    group_by(species_lump, year_bin) %>%
+    dplyr::left_join(
+      bio_df,
+      by = c("species_lump", "year_bin", "coastline_m")
+    ) %>%
+    dplyr::mutate(mean_density = replace_na(mean_density, 0)) %>%
+    dplyr::arrange(species_lump, year_bin, coastline_m) %>%
+    dplyr::group_by(species_lump, year_bin) %>%
     mutate(
       cum_den = cumsum(mean_density),
       cum_den_norm = cum_den / max(cum_den, na.rm = TRUE)
     ) %>%
     # Add a row at coastline_m = 0 for plotting (to anchor curves at 0)
-  group_modify(~ {
-    .x <- add_row(.x,
-      cum_den = 0, cum_den_norm = 0, coastline_m = 0, .before = 1)
-    .x <- add_row(.x,
-      cum_den = 1, cum_den_norm = 1,
-      coastline_m = max(.x$coastline_m, na.rm = TRUE),
-      .after = nrow(.x))
-    .x
-  }) %>%
-    ungroup() %>%
-    select(
+    dplyr::group_modify(~ {
+      .x <- add_row(.x,
+        cum_den = 0, cum_den_norm = 0, coastline_m = 0, .before = 1
+      )
+      .x <- add_row(.x,
+        cum_den = 1, cum_den_norm = 1,
+        coastline_m = max(.x$coastline_m, na.rm = TRUE),
+        .after = nrow(.x)
+      )
+      .x
+    }) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(
       species_lump, year_bin, coastline_m, cum_den, cum_den_norm
     )
 
   return(bio_df_full)
 }
-
-

@@ -26,15 +26,13 @@ strend_stats <- read.csv('/capstone/coastalconservation/data/processed/strends_s
 ```{r}
 # Filter to only species moving north
 north_edge_trends <- ntrend_stats %>% 
-  select(species, north_trend_positive) %>% 
-  filter(north_trend_positive == TRUE)
+  filter(n_trend_rate > 200) 
 ```
 
 ```{r}
 # Filter to only species moving northern
-south_edge_trends <- strend_stats %>% 
-  select(species, north_trend_positive) %>% 
-  filter(north_trend_positive == TRUE)
+south_edge_trends <- strend_stats %>%
+  filter(north_trend_positive > 200)
 ```
 
 ```{r}
