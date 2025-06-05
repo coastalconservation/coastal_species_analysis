@@ -213,7 +213,7 @@ priority_scores %>%
 ```{r}
 saveRDS(
   priority_scores,
-  file = "/capstone/coastalconservation/data/processed/priority_species_scores.rds"
+  file = "/capstone/coastalconservation/data/processed/analyses_results/priority_species_scores.rds"
 )
 ```
 
