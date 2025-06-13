@@ -1,25 +1,31 @@
----
-title: "Range Shift Analysis"
-format: html
-editor_options: 
-  chunk_output_type: console
----
-# Overview: Contemporary Range Shift Analysis
-
-In `CA_range-classification.qmd`, we found which of the 396 species studied had range edges within the dangermond region. Now, we will take those 59 distrinct species, and investigate how their boundaries are moving over time.
-
-
-## Load packages
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
 #| code-fold: true
-library(tidyverse)
 library(here)
-library(readxl)
-library(scales) 
-```
-
-## Read data
-```{r}
+library(readr)
+library(lubridate)
+library(tidyverse)
+library(stats) # Load necessary libraries
+library(here) # For building file paths relative to project root
+library(readr) # For reading CSV files
+library(lubridate) # For working with date/time data (used in sourced scripts)
+library(dplyr) # Data manipulation
+library(tidyr) # Data tidying
+library(purrr) # Functional programming tools
+library(ggplot2) # Plotting
+library(mgcv) # Generalized Additive Models
+library(scales)
+#
+#
+#
+#
 # Source cleaning function
 source(here("scripts", "functions", "clean_biodiv.R"))
 source(here("scripts", "functions", "cumulative_density_dataframe.R"))
@@ -27,7 +33,7 @@ source(here("scripts", "functions", "range_trends.R"))
 source(here("scripts", "functions", "cumulative_density_graph.R"))
 # Load data
 species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
-marine_sites <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv") 
+marine_sites <- read_csv("/capstone/coastalconservation/data/processed/marine_site_segments.csv") # Load processed datasets
 processed_data_path <- "/capstone/coastalconservation/data/processed"
 species_names <- read_csv("/capstone/coastalconservation/data/processed/species_names.csv")
 
@@ -38,101 +44,55 @@ biodiv_df <- read_csv(
     ),
     show_col_types = FALSE
 )
-```
-
-## Overview: Emperical Distribution Function
-
-We employed a distribution model to quantify species density along the coast. To do this, we grouped the species observations into 5 year bins, and used an emperical cumulative distribution function eCDF that was then modeled with a generalized additive model to find the coastline distribution of each species. The work flow can be found in the `cumulative_density_dataframe.R` script under the `cum_den_df` function and`range_trends.R` script under the `gam_predict` and `gam_plot` functions. Below are examples of the outputs for a single species.
-
-```{r}
-fucus_obs <- biodiv_df %>%
-    filter(species_lump=="Fucus spp") %>% 
-    left_join(
-      marine_sites %>%
-        select(marine_site_name, coastline_m),
-      by = join_by(marine_site_name)
-    ) %>%
-    filter(
-      state_province == "California"
-    )
-
-cum_den_df(fucus_obs)
-```
-
-```{r}
-gam_predict("Fucus spp", biodiv_df)
-```
-
-```{r}
+#
+#
+#
 gam_plot("Fucus spp")
-```
-
-
-## Overview: Range Trends
-
-From the previous analysis, for each model we approximate the 5th and 95th perentiles and treat them as the core range boundaries for each year bin. We then linear model to follow the trends of each boundary. The work flow can be found in the `range_trends.R` script under the `range_trend` and `range_plot` functions. Below are examples of the outputs for a single species.
-
-```{r}
-range_trend("Fucus spp", biodiv_df)
-```
-
-```{r}
-range_plot("Fucus spp")
-```
-
-
-## Analysis
-
-Pull species with boundaries near Point Conception.
-
-```{r}
+gam_predict("Fucus spp", biodiv_df)
+#
+#
+#
 dangermond_boundary_species <- species_extent %>%
     filter(str_detect(southern_extent_name, "Point Conception") |
         str_detect(northern_extent_name, "Point Conception"))
-```
-
-```{r}
+#
+#
+#
 dangermond_boundary_species
-```
-
-```{r}
-dangermond_boundary_species_list <- dangermond_boundary_species %>% 
-    pull(species_lump)
-
+#
+#
+#
+dangermond_boundary_species_list <- dangermond_boundary_species %>% pull(species_lump)
 dangermond_boundary_species_list
-```
-
-Filter out those with northern boundaries near Point Conception.
-
-```{r}
+#
+#
+#
+#
 northern_boundary_species <- dangermond_boundary_species %>%
     filter(
         str_detect(northern_extent_name, "Point Conception")
     ) %>%
     pull(species_lump)
-```
-
-```{r}
+#
+#
+#
 northern_boundary_species
-```
-
-Filter out those with southern boundaries near Point Conception.
-
-```{r}
+#
+#
+#
+#
 southern_boundary_species <- dangermond_boundary_species %>%
     filter(
         str_detect(southern_extent_name, "Point Conception")
     ) %>%
     pull(species_lump)
-```
-
-```{r}
+#
+#
+#
 southern_boundary_species
-```
-
-Calculate the trends of those with northern boundaries.
-
-```{r}
+#
+#
+#
 northern_trends_df <- map_dfr(
     northern_boundary_species,
     function(species_name) {
@@ -164,39 +124,35 @@ northern_trends_df <- map_dfr(
     }
 )
 
-```
-
-### Output
-
-The output of ```northern_trends_df``` lives in  "/capstone/coastalconservation/data/processed/ntrends_stats.csv"
-```{r}
+#
+#
+#
+#
 write_csv(
     northern_trends_df,
     file = "/capstone/coastalconservation/data/processed/ntrends_stats.csv"
 )
-```
-
-```{r}
+#
+#
+#
 northern_trends_df %>% View()
-```
-
-```{r}
+#
+#
+#
 northern_trends_df %>%
     filter(
         n_trend_rate > 200,
     ) %>%
     pull(species)
-```
-
- [1] "Aplysia californica"   "Bugula neritina"       "Chondria arcuata"     
- [4] "Chondria dasyphylla"   "Gastroclonium parvum"  "Haminoea vesicula"    
- [7] "Jania rosea"           "Nemalion elminthoides" "Norrisia norrisii"    
-[10] "Paraxanthias taylori"  "Pseudochama exogyra"   "Roperia poulsoni"     
-[13] "Taonia lennebackerae"  "Tegula aureotincta"   
-
-Calculate the trends of those with southern boundaries.
-
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
 southern_trends_df <- map_dfr(
     southern_boundary_species,
     function(species_name) {
@@ -227,47 +183,42 @@ southern_trends_df <- map_dfr(
         )
     }
 )
-```
-
-### Output
-
-The output of ```southern_trends_df``` lives in  "/capstone/coastalconservation/data/processed/strends_stats.csv"
-
-```{r}
+#
+#
+#
 write_csv(
     southern_trends_df,
     file = "/capstone/coastalconservation/data/processed/strends_stats.csv"
 )
-```
-
-```{r}
+#
+#
+#
 southern_trends_df %>% View()
-```
-
-```{r}
+#
+#
+#
 southern_trends_df %>%
     filter(
         n_trend_rate > 200,
     ) %>%
     pull(species)
-```
-
- [1] "Ahnfeltiopsis linearis"            "Calliostoma annulatum"            
- [3] "Calliostoma canaliculatum"         "Cryptosiphonia woodii"            
- [5] "Derbesia marina"                   "Dilsea californica"               
- [7] "Diodora aspera"                    "Fucus spp"                        
- [9] "Halosaccion glandiforme"           "Halymenia/Schizymenia spp"        
-[11] "Haplogloia andersonii"             "Henricia spp"                     
-[13] "Laminaria setchellii"              "Neoptilota/Ptilota spp"           
-[15] "Neorhodomela larix"                "Neorhodomela oregona"             
-[17] "Onchidella carpenteri"             "Pelvetiopsis arborescens/limitata"
-[19] "Semibalanus cariosus"              "Spirobranchus spinosus"           
-[21] "Styela montereyensis"              "Tegula brunnea"                   
-[23] "Ulothrix spp" 
-
-Calculate the trends of the boundaries of all species within the Point Conception region.
-
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 dangermond_boundaries_df <- map_dfr(
     dangermond_boundary_species_list,
     function(species_name) {
@@ -305,9 +256,9 @@ dangermond_boundaries_df <- map_dfr(
         )
     }
 ) %>% arrange(species)
-```
-
-```{r}
+#
+#
+#
 north_boundaries_df <- dangermond_boundaries_df %>%
     filter(
         species %in% southern_boundary_species
@@ -317,16 +268,9 @@ south_boundaries_df <- dangermond_boundaries_df %>%
     filter(
         species %in% northern_boundary_species
     )
-```
-
-### Output
-
-The output of ```north_boundaries_df``` lives in  "/capstone/coastalconservation/data/processed/north_boundary_trends.csv"
-
-The output of ```south_boundaries_df``` lives in  "/capstone/coastalconservation/data/processed/south_boundary_trends.csv"
-
-
-```{r}
+#
+#
+#
 saveRDS(
     north_boundaries_df,
     file = "/capstone/coastalconservation/data/processed/north_boundary_trends.rds"
@@ -336,4 +280,6 @@ saveRDS(
     south_boundaries_df,
     file = "/capstone/coastalconservation/data/processed/south_boundary_trends.rds"
 )
-```
+#
+#
+#

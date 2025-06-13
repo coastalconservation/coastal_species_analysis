@@ -14,7 +14,7 @@ The whole script is available in ```ca_segment_classification.R```, however we w
 ## Set Up 
 ```{r}
 library(tidyverse)
-library(stringr)
+library(here)
 ```
 
 ```{r}
@@ -374,25 +374,21 @@ dangermond_boundary_species <- species_extent %>%
 dangermond_boundary_species %>% pull(species_lump)
 ```
 
-Northern
+Northern Boundary in Point Conception
 ```{r}
-dangermond_boundary_species %>% 
-  filter(
-    northern_extent_name == "Southern Point Conception"
-  ) %>%
+dangermond_boundary_species %>%
+    filter(str_detect(southern_extent_name, "Point Conception")) %>%
   pull(species_lump)
 ```
 
-Southern
+Southern Boundary in Point Conception
 ```{r}
-dangermond_boundary_species %>% 
-  filter(
-    southern_extent_name == "Northern Point Conception"
-  ) %>%
+dangermond_boundary_species%>%
+    filter(str_detect(northern_extent_name, "Point Conception")) %>%
   pull(species_lump)
 ```
+
 How many species have a range boundary in California?
-
 ```{r}
 species_extent %>% 
   filter((southern_extent_id > 1 &

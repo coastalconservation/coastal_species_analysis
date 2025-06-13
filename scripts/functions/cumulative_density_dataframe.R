@@ -1,61 +1,66 @@
-#' Calculate Cumulative Density and Normalized Cumulative Density in 5-Year Bins
+#' Calculate Cumulative Density Distribution Along Coastline
 #'
-#' This function processes the cleaned MARINe surveys dataframe to compute the
-#' cumulative sum of density values (`cum_den`) and the normalized cumulative
-#' density (`cum_den_norm`) for each species group within 5-year bins.
+#' This function processes bio-survey data to calculate cumulative density
+#' distributions of species along the California coastline. It groups data into
+#' 5-year bins and computes normalized cumulative densities that can be used for
+#' plotting species distribution curves.
 #'
-#' The function filters out entries where the `collection_source` is "point contact",
-#' groups the data by `species_lump` and 5-year bin, arranges it by latitude within each group,
-#' and calculates cumulative density metrics.
+#' @param bio_df A data frame containing biological survey
+#'  data with the following required columns:
+#'   \itemize{
+#'     \item \code{density_per_m2}: Numeric density measurements per m^2
+#'     \item \code{percent_cover}: Numeric percent cover values
+#'     \item \code{state_province}: Character vector of state/province names
+#'     \item \code{year}: Numeric year of observation
+#'     \item \code{species_lump}: Character vector of species names/groups
+#'     \item \code{marine_site_name}: Character vector of site names
+#'     \item \code{coastline_m}: Numeric distance along coastline in meters
+#'   }
 #'
-#' @param bio_df A data frame containing at least the following columns:
-#' \describe{
-#'   \item{species_lump}{Species group identity}
-#'   \item{year}{Survey year}
-#'   \item{latitude}{Latitude of the survey point (to be replaced with distance along coast).}
-#'   \item{density_per_m2}{Density measurement per square meter.}
-#'   \item{collection_source}{Method of collection (e.g., "point contact").}
-#' }
+#' @return A tibble with the following columns:
+#'   \itemize{
+#'     \item \code{species_lump}: Species name/group
+#'     \item \code{year_bin}: 5-year time periods (e.g., "2000-2004")
+#'     \item \code{coastline_m}: Distance along coastline in meters
+#'     \item \code{cum_den}: Cumulative density (raw values)
+#'     \item \code{cum_den_norm}: Normalized cumulative density (0-1 scale)
+#'   }
 #'
-#' @return A data frame with the following columns:
-#' \describe{
-#'   \item{cum_den}{Cumulative sum of `density_per_m2` within each species-bin group.}
-#'   \item{cum_den_norm}{Normalized cumulative density (cumulative sum divided by the group's maximum cumulative sum).}
-#'   \item{latitude}{Latitude corresponding to the measurement (to be replaced with distance along coast).}
-#'   \item{year_bin}{5-year bin of the survey year.}
-#'   \item{species_lump}{Grouped species identifier.}
-#' }
-#'
-#' @import dplyr
 #' @export
 cum_den_df <- function(bio_df) {
+  # Determine which density metric to use based on data availability
   if (all(is.na(bio_df$density_per_m2))) {
+    # Use percent cover if density data is entirely missing
     bio_df <- bio_df %>%
       dplyr::mutate(cum_norm = percent_cover)
   } else {
+    # Use density per m2 as primary metric
     bio_df <- bio_df %>%
       dplyr::mutate(cum_norm = density_per_m2)
   }
 
-  # Filter relevant data and create year bins
+  # Filter to California data and create 5-year time bins
   bio_df <- bio_df %>%
     filter(
       state_province == "California"
     ) %>%
     dplyr::mutate(
+      # Create 5-year bins (e.g., 2000-2004, 2005-2009)
       year_bin = paste0(
         floor(year / 5) * 5, "-",
         floor(year / 5) * 5 + 4
       ),
       year_bin = as.factor(year_bin)
     ) %>%
+    # Calculate mean density by species, site, coastline position, and time bin
     group_by(species_lump, marine_site_name, coastline_m, year_bin) %>%
     dplyr::summarise(
       mean_density = mean(cum_norm, na.rm = TRUE),
       .groups = "drop"
     )
 
-  # Create a complete grid of species x year_bin x coastline_m
+  # Create a complete grid to ensure all species
+  # x year_bin x coastline combinations exist
   full_grid <- expand.grid(
     species_lump = unique(bio_df$species_lump),
     year_bin = unique(bio_df$year_bin),
@@ -63,24 +68,29 @@ cum_den_df <- function(bio_df) {
   ) %>%
     dplyr::as_tibble()
 
-  # Join with observed data and compute cumulative and normalized densities
+  # Join observed data with complete grid and compute cumulative densities
   bio_df_full <- full_grid %>%
     dplyr::left_join(
       bio_df,
       by = c("species_lump", "year_bin", "coastline_m")
     ) %>%
+    # Replace missing values with zero density
     dplyr::mutate(mean_density = replace_na(mean_density, 0)) %>%
     dplyr::arrange(species_lump, year_bin, coastline_m) %>%
+    # Calculate cumulative density along coastline
+    # for each species-year combination
     dplyr::group_by(species_lump, year_bin) %>%
     mutate(
       cum_den = cumsum(mean_density),
       cum_den_norm = cum_den / max(cum_den, na.rm = TRUE)
     ) %>%
-    # Add a row at coastline_m = 0 for plotting (to anchor curves at 0)
+    # Add anchor points for smooth plotting curves
     dplyr::group_modify(~ {
+      # Add starting point at coastline position 0
       .x <- add_row(.x,
         cum_den = 0, cum_den_norm = 0, coastline_m = 0, .before = 1
       )
+      # Add ending point at maximum coastline position
       .x <- add_row(.x,
         cum_den = 1, cum_den_norm = 1,
         coastline_m = max(.x$coastline_m, na.rm = TRUE),
@@ -89,6 +99,7 @@ cum_den_df <- function(bio_df) {
       .x
     }) %>%
     dplyr::ungroup() %>%
+    # Select final columns for output
     dplyr::select(
       species_lump, year_bin, coastline_m, cum_den, cum_den_norm
     )

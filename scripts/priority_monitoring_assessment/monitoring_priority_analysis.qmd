@@ -1,29 +1,30 @@
 ---
 title: "Monitoring_priority_analysis"
 format: html
-editor: visual
 editor_options: 
   chunk_output_type: inline
 ---
 
 This file walks through how we combined data sets to create the monitorying priority list. Each species is given a monitoring priority based on three criteria: 1. Whether they have a range edge within point conception, 2. Whether they are showing a range shift trend, 3. Whether the percentage of habitat suitability is going up or down within point conception. 
 
+
+
 ```{r}
 # Load packages
 library(tidyverse)
-library(dplyr)
 ```
+
+## Load Processed Files
 
 ```{r}
 # Load files 
 raster_stats <- read.csv('/capstone/coastalconservation/data/processed/analyses_results/species_suitability_change.csv')
 ntrend_stats <- read.csv('/capstone/coastalconservation/data/processed/ntrends_stats.csv')
 strend_stats <- read.csv('/capstone/coastalconservation/data/processed/strends_stats.csv')
-species_names <- read_csv("/capstone/coastalconservation/data/processed/species_names.csv")
-priority_species_binary <- read_csv("/capstone/coastalconservation/data/processed/analyses_results/priority_species_binary.csv")
-species_extent <- read_csv("/capstone/coastalconservation/data/processed/species_extent.csv")
+species_names <- read_csv('/capstone/coastalconservation/data/processed/species_names.csv')
+priority_species_binary <- read_csv('/capstone/coastalconservation/data/processed/analyses_results/priority_species_binary.csv')
+species_extent <- read_csv('/capstone/coastalconservation/data/processed/species_extent.csv')
 ```
-
 
 
 ```{r}
@@ -79,11 +80,22 @@ n_edge_trends <- ntrend_stats %>%
 ```
 
 ```{r}
+n_edge_trends %>% 
+    pull(species)
+```
+
+```{r}
 # Filter to only southern edge species moving north
 s_edge_trends <- strend_stats %>%
   # one coastline segment (100km) in 25 year datasets
   # 4km per year
   filter(n_trend_rate / 1000 >= 4)
+```
+
+
+```{r}
+s_edge_trends %>% 
+    pull(species)
 ```
 
 ```{r}
@@ -147,6 +159,20 @@ all_species_factors <- left_join(all_species, all_species_factors, by = "species
 
 all_species_factors %>% view()
 ```
+
+```{r}
+all_species_factors %>% 
+  filter(species_lump %in% pc_species_list,
+         percent_change_dangermond > 0)
+
+all_species_factors %>% 
+  filter(species_lump %in% pc_species_list,
+         percent_change_dangermond < 0)
+
+all_species_factors %>% 
+  filter(species_lump %in% pc_species_list,
+         is.na(percent_change_dangermond))
+```
 ## Scoring species
 
 ```{r}
@@ -192,7 +218,9 @@ priority_scores <- all_species_factors %>%
       total_score == 1 ~ "low",
       total_score == 0 ~ "no"
     )
-  ) %>% unique()
+  ) 
+
+priority_scores[248,]$eco_process <- "contraction"
 
 priority_scores %>% view()
 ```
@@ -205,7 +233,7 @@ priority_scores %>% names()
 
 ```{r}
 priority_scores %>%
-  filter(priority == "high", eco_process == "contraction") %>%
+  filter(northward_trend == 1, eco_process == "expansion") %>%
   pull(species_lump)
 ```
 
@@ -217,3 +245,6 @@ saveRDS(
 )
 ```
 
+```{r}
+priority_scores %>% filter(eco_process == "expansion") %>% view()
+```
